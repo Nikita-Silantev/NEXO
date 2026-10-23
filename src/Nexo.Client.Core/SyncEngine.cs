@@ -18,6 +18,8 @@ public sealed class SyncEngine(NexoApi api, LocalDb db, string myUserId) : IDisp
     private Task? _sync, _out;
 
     public ConnectionState State { get; private set; } = ConnectionState.Offline;
+    /// <summary>Последняя причина обрыва связи (для показа пользователю).</summary>
+    public string? LastError { get; private set; }
     public event Action<ConnectionState>? StateChanged;
     public event Action? ChatsChanged;
     public event Action<string>? MessagesChanged;
@@ -51,7 +53,7 @@ public sealed class SyncEngine(NexoApi api, LocalDb db, string myUserId) : IDisp
                 using var call = api.Sync.Subscribe(new SubscribeRequest { LastUpdateSeq = last, ClientVersion = "0.1.0" }, headers, cancellationToken: ct);
                 while (await call.ResponseStream.MoveNext(ct))
                 {
-                    SetState(ConnectionState.Online); delay = TimeSpan.FromSeconds(1);
+                    LastError = null; SetState(ConnectionState.Online); delay = TimeSpan.FromSeconds(1);
                     var ev = call.ResponseStream.Current;
                     switch (ev.EventCase)
                     {
@@ -65,7 +67,7 @@ public sealed class SyncEngine(NexoApi api, LocalDb db, string myUserId) : IDisp
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
             catch (RpcException e) when (e.StatusCode == StatusCode.Aborted) { /* перезапуск потока после повторной синхронизации */ }
             catch (RpcException e) when (ApiError.Reason(e) is ErrorReason.TokenRevoked or ErrorReason.RefreshReuseDetected) { SetState(ConnectionState.Offline); break; }
-            catch { /* сеть недоступна и т. п. – повторим */ }
+            catch (Exception e) { LastError = e is RpcException re ? ApiError.Message(re) : e.Message; /* повторим */ }
             SetState(ConnectionState.Offline);
             try { await Task.Delay(delay, ct); } catch (OperationCanceledException) { break; }
             delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30));

@@ -77,6 +77,8 @@ public sealed class SyncServiceImpl(NpgsqlDataSource ds, UpdateHub hub) : SyncSe
         }
 
         last = await DrainJournalAsync(a.UserId, last, stream, ct);
+        // Сразу подтверждаем подключение, не дожидаясь первого события или таймера.
+        await stream.WriteAsync(new SubscribeEvent { Heartbeat = new Heartbeat { ServerTime = Timestamp.FromDateTime(DateTime.UtcNow) } }, ct);
 
         var beat = new PeriodicTimer(HeartbeatEvery);
         var beatTask = beat.WaitForNextTickAsync(ct).AsTask();
