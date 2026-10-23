@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Код gRPC-контрактов генерируется из ../../proto/*.proto. Вручную ничего не писать. -->
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.*" />
+    <PackageReference Include="Grpc.Core.Api" Version="2.*" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.*" />
+    <PackageReference Include="Grpc.Tools" Version="2.*" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup>
+    <Protobuf Include="..\..\proto\*.proto" ProtoRoot="..\..\proto" GrpcServices="Both" />
+  </ItemGroup>
+</Project>

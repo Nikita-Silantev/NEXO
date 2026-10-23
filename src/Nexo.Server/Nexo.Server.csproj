@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.*" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.*" />
+    <PackageReference Include="Npgsql" Version="9.*" />
+    <PackageReference Include="Dapper" Version="2.*" />
+    <PackageReference Include="NSec.Cryptography" Version="25.*" />
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Nexo.Core\Nexo.Core.csproj" />
+    <ProjectReference Include="..\Nexo.Contracts\Nexo.Contracts.csproj" />
+  </ItemGroup>
+</Project>

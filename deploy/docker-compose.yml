@@ -1,4 +1,4 @@
-# NEXO: инфраструктура (этап Э1). Сервис приложения и Caddy добавляются в ветке с сервером.
+# NEXO: инфраструктура и сервер (этап Э1).
 # Запуск:  cp .env.example .env  ->  заполнить  ->  docker compose up -d --build
 name: nexo
 
@@ -133,6 +133,42 @@ services:
       - backups:/backups
     networks: [internal]
 
+  server:
+    build:
+      context: ..
+      dockerfile: src/Nexo.Server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      Nexo__ConnectionString: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=nexo,public;Maximum Pool Size=60"
+      Nexo__KekBase64: ${NEXO_KEK_BASE64}
+      Nexo__FakeKdfSecretBase64: ${NEXO_FAKE_KDF_SECRET_BASE64}
+      Nexo__SigningKeyFile: /data/signing-key.b64
+    volumes:
+      - serverdata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:5081/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [server]
+    environment:
+      NEXO_DOMAIN: ${NEXO_DOMAIN:-localhost}
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+    networks: [internal]
+
 networks:
   internal:
 
@@ -141,3 +177,5 @@ volumes:
   redisdata:
   miniodata:
   backups:
+  serverdata:
+  caddydata:

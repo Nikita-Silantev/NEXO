@@ -1,0 +1,13 @@
+# {$NEXO_DOMAIN}: для локальной проверки localhost (Caddy выпустит локальный сертификат), в бою – ваш домен.
+{$NEXO_DOMAIN:localhost} {
+	encode zstd gzip
+	# gRPC поверх HTTP/2 к серверу приложения
+	@grpc header Content-Type application/grpc*
+	reverse_proxy @grpc h2c://server:5080
+	# gRPC-Web и проверка здоровья
+	reverse_proxy server:5081
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+	}
+}
