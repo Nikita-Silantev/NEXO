@@ -183,7 +183,8 @@ public sealed class AuthServiceImpl(
             return Result(tokens, docs);
         }
 
-        var others = await con.ScalarAsync<int>("select count(*) from devices where user_id = @u and revoked_at is null", new { u = user.Id }, ct: ct);
+        var others = await con.ScalarAsync<int>(@"select count(*) from devices d where d.user_id = @u and d.revoked_at is null
+              and exists (select 1 from sessions s where s.device_id = d.id and s.revoked_at is null and s.expires_at > now())", new { u = user.Id }, ct: ct);
         if (others == 0)   // единственное устройство: достаточно пароля (документ 81 02)
         {
             await using var tx = await con.BeginTransactionAsync(ct);
@@ -344,6 +345,9 @@ public sealed class AuthServiceImpl(
         var a = context.Auth(); var ct = context.CancellationToken;
         await using var con = await ds.OpenAsync(ct);
         await sessions.RevokeFamilyAsync(con, null, a.SessionId, "LOGOUT", ct);
+        // Выход стирает локальные данные и ключ устройства, поэтому устройство больше не может подтверждать входы: отзываем его.
+        await sessions.RevokeDeviceSessionsAsync(con, null, a.DeviceId, "LOGOUT", ct);
+        await con.ExecAsync("update devices set revoked_at = now() where id = @d and user_id = @u and revoked_at is null", new { d = a.DeviceId, u = a.UserId }, ct: ct);
         await AuthEvents.AddAsync(con, a.UserId, a.DeviceId, "LOGOUT", context.ClientIp(), context.UserAgent(), ct: ct);
         guard.Forget(a.SessionId);
         return new Empty();

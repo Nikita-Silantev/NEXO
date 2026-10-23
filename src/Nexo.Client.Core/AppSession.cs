@@ -11,7 +11,7 @@ public sealed class AppSettings
     public bool LockOnMinimize { get; set; } = true;
     public string DeviceName { get; set; } = Environment.MachineName;
 
-    public static string Directory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NEXO");
+    public static string Directory => Environment.GetEnvironmentVariable("NEXO_DATA_DIR") is { Length: > 0 } d ? d : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NEXO");
     private static string FilePath => Path.Combine(Directory, "settings.json");
 
     public static AppSettings Load()
