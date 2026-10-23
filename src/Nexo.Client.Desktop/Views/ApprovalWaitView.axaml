@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexo.Client.Desktop.Views.ApprovalWaitView">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Border Classes="card" Width="420" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Подтвердите вход на другом устройстве" Classes="title" TextWrapping="Wrap"/>
+        <TextBlock Classes="hint" Text="На вашем уже подключённом устройстве появился запрос. Сверьте код и подтвердите вход. Запрос действует 5 минут."/>
+        <TextBlock Text="{Binding Code}" FontSize="40" FontWeight="Bold" HorizontalAlignment="Center" FontFamily="Menlo,Consolas,monospace"/>
+        <ProgressBar IsIndeterminate="True"/>
+        <Button Content="Отмена" Command="{Binding Cancel}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

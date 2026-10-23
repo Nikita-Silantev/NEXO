@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexo.Client.Desktop.Views.UnlockView">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Border Classes="card" Width="420" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+        <TextBlock Text="NEXO заблокирован" Classes="title"/>
+        <TextBox Text="{Binding Secret}" PasswordChar="•" Watermark="{Binding Prompt}"/>
+        <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <Button Classes="primary" Content="Разблокировать" Command="{Binding Unlock}" IsEnabled="{Binding NotBusy}" IsDefault="True"/>
+        <Button Classes="link" Content="{Binding SwitchText}" Command="{Binding SwitchMode}" IsVisible="{Binding HasPin}"/>
+        <Button Classes="link" Content="Выйти из учётной записи (данные на устройстве будут удалены)" Command="{Binding SignOut}"/>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

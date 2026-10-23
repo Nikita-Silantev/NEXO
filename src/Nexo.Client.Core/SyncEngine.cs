@@ -23,6 +23,7 @@ public sealed class SyncEngine(NexoApi api, LocalDb db, string myUserId) : IDisp
     public event Action<string>? MessagesChanged;
     public event Action<string, string>? Typing;            // chatId, userId
     public event Action<string>? ResyncStarted;
+    public event Action<LoginApproval>? LoginApprovalRequested;
 
     public void Start()
     {
@@ -105,6 +106,7 @@ public sealed class SyncEngine(NexoApi api, LocalDb db, string myUserId) : IDisp
             case Update.PayloadOneofCase.Chat:
                 if (u.Chat.Removed) db.RemoveChat(u.Chat.Chat.ChatId); else db.UpsertChat(u.Chat.Chat);
                 ChatsChanged?.Invoke(); break;
+            case Update.PayloadOneofCase.LoginApproval: LoginApprovalRequested?.Invoke(u.LoginApproval.Approval); break;
             case Update.PayloadOneofCase.Typing: Typing?.Invoke(u.Typing.ChatId, u.Typing.UserId); break;
             // Остальные виды (папки, черновики, настройки, медиа, реакции...) относятся к этапу Э2 и позже.
         }

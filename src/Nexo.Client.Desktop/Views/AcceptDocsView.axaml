@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexo.Client.Desktop.Views.AcceptDocsView">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Border Classes="card" Width="420" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Обновлены документы" Classes="title"/>
+        <TextBlock Classes="hint" Text="Чтобы продолжить, примите новые редакции документов."/>
+        <ItemsControl ItemsSource="{Binding Docs}">
+          <ItemsControl.ItemTemplate><DataTemplate><Button Classes="link" Content="{Binding Title}" Tag="{Binding Url}" Click="OnOpenDoc" HorizontalAlignment="Left"/></DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <CheckBox IsChecked="{Binding Accepted}" Content="Принимаю"/>
+        <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <Button Classes="primary" Content="Продолжить" Command="{Binding Accept}"/>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

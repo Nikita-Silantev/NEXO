@@ -1,0 +1,188 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nexo.Client.Desktop.ViewModels"
+             x:Class="Nexo.Client.Desktop.Views.MainView">
+  <Grid ColumnDefinitions="330,*">
+    <!-- Левая панель: поиск и список чатов -->
+    <DockPanel Grid.Column="0" Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="10">
+        <TextBox x:Name="SearchBox" Text="{Binding SearchText}" Watermark="Поиск (Ctrl/⌘+K)" />
+        <Button Grid.Column="1" Content="⚙" Command="{Binding ToggleSettings}" Margin="6,0,0,0" ToolTip.Tip="Настройки (Ctrl/⌘+,)"/>
+        <Button Grid.Column="2" Content="🔒" Command="{Binding LockNow}" Margin="6,0,0,0" ToolTip.Tip="Заблокировать (Ctrl/⌘+L)"/>
+      </Grid>
+      <TextBlock DockPanel.Dock="Top" Text="{Binding Connection}" IsVisible="{Binding HasConnectionNote}" Classes="hint" Margin="12,0,12,6"/>
+      <Button DockPanel.Dock="Bottom" Content="{Binding ArchiveButtonText}" Command="{Binding ToggleArchive}" Classes="link" HorizontalAlignment="Center"/>
+      <StackPanel DockPanel.Dock="Top" IsVisible="{Binding HasFoundUsers}">
+        <TextBlock Text="Пользователи" Classes="hint" Margin="12,4"/>
+        <ItemsControl ItemsSource="{Binding FoundUsers}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Background="Transparent"
+                      Command="{Binding $parent[ItemsControl].DataContext.OpenUser}" CommandParameter="{Binding}">
+                <StackPanel><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/><TextBlock Text="{Binding Username, StringFormat=@{0}}" Classes="hint"/></StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+      <ListBox x:Name="ChatList" ItemsSource="{Binding Chats}" SelectedItem="{Binding Selected}" Background="Transparent">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Grid ColumnDefinitions="44,*,Auto" Margin="0,4">
+              <Grid.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{Binding PinText}" Command="{Binding Owner.TogglePin}" CommandParameter="{Binding}"/>
+                  <MenuItem Header="{Binding MuteText}" Command="{Binding Owner.ToggleMute}" CommandParameter="{Binding}"/>
+                  <MenuItem Header="{Binding ArchiveText}" Command="{Binding Owner.ToggleArchiveChat}" CommandParameter="{Binding}"/>
+                </ContextMenu>
+              </Grid.ContextMenu>
+              <Border Width="38" Height="38" CornerRadius="19" Background="{DynamicResource SystemAccentColor}" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Initials}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+              </Border>
+              <StackPanel Grid.Column="1" Margin="8,0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Preview}" Classes="hint" TextTrimming="CharacterEllipsis" MaxLines="1"/>
+              </StackPanel>
+              <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="4">
+                <TextBlock Text="{Binding Time}" Classes="hint" HorizontalAlignment="Right"/>
+                <Border IsVisible="{Binding HasUnread}" CornerRadius="9" MinWidth="18" Padding="5,1" HorizontalAlignment="Right"
+                        Background="{DynamicResource SystemAccentColor}">
+                  <TextBlock Text="{Binding UnreadText}" Foreground="White" FontSize="11" HorizontalAlignment="Center"/>
+                </Border>
+              </StackPanel>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+
+    <!-- Правая часть: чат -->
+    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+      <Border Grid.RowSpan="3" IsVisible="{Binding NoSelection}">
+        <TextBlock Text="Выберите чат или найдите пользователя по нику" Classes="hint" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      </Border>
+      <Border Grid.Row="0" IsVisible="{Binding HasApprovals}" Background="#33FFB800" Padding="12">
+        <ItemsControl ItemsSource="{Binding Approvals}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Spacing="6">
+                <TextBlock TextWrapping="Wrap"><Run Text="Новое устройство просит войти: "/><Run Text="{Binding RequesterName}" FontWeight="Bold"/><Run Text=". Код сверки: "/><Run Text="{Binding Code}" FontWeight="Bold"/></TextBlock>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="Подтвердить" Command="{Binding $parent[ItemsControl].DataContext.ApproveLogin}" CommandParameter="{Binding}"/>
+                  <Button Content="Отклонить" Command="{Binding $parent[ItemsControl].DataContext.DenyLogin}" CommandParameter="{Binding}"/>
+                </StackPanel>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+
+      <DockPanel Grid.Row="1" Grid.RowSpan="2" IsVisible="{Binding HasSelection}">
+        <Border DockPanel.Dock="Top" Padding="14,10" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel>
+              <TextBlock Text="{Binding ChatTitle}" FontSize="17" FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding Typing}" IsVisible="{Binding HasTyping}" Classes="hint"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <Button Content="Ранее" Command="{Binding LoadOlder}" ToolTip.Tip="Загрузить более ранние сообщения"/>
+              <Button Content="✕" Command="{Binding CloseChat}" ToolTip.Tip="Закрыть (Esc)"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+        <Border DockPanel.Dock="Bottom" Padding="10">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasCompose}">
+              <TextBlock Text="{Binding ReplyPreview}" Classes="hint" TextTrimming="CharacterEllipsis"/>
+              <Button Grid.Column="1" Content="✕" Command="{Binding CancelCompose}" Classes="link"/>
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox x:Name="Composer" Text="{Binding Draft}" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" Watermark="Сообщение (Enter — отправить, Shift+Enter — новая строка)"/>
+              <Button Grid.Column="1" Content="➤" Command="{Binding Send}" Margin="8,0,0,0" VerticalAlignment="Bottom" Classes="primary" Width="44"/>
+            </Grid>
+          </StackPanel>
+        </Border>
+        <ListBox x:Name="MessageList" ItemsSource="{Binding Messages}" Background="Transparent" SelectionMode="Single">
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem"><Setter Property="Padding" Value="12,3"/></Style>
+          </ListBox.Styles>
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="bubble" Classes.mine="{Binding IsMine}">
+                <Border.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="Ответить" Command="{Binding Owner.ReplyTo}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Копировать" Command="{Binding Owner.CopyText}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Изменить" Command="{Binding Owner.EditStart}" CommandParameter="{Binding}" IsVisible="{Binding CanEdit}"/>
+                    <MenuItem Header="Удалить у меня" Command="{Binding Owner.DeleteForMe}" CommandParameter="{Binding}"/>
+                    <MenuItem Header="Удалить у всех" Command="{Binding Owner.DeleteForAll}" CommandParameter="{Binding}" IsVisible="{Binding CanDeleteForEveryone}"/>
+                    <MenuItem Header="Повторить отправку" Command="{Binding Owner.RetryMessage}" CommandParameter="{Binding}" IsVisible="{Binding Failed}"/>
+                    <MenuItem Header="Отменить отправку" Command="{Binding Owner.DiscardMessage}" CommandParameter="{Binding}" IsVisible="{Binding Failed}"/>
+                  </ContextMenu>
+                </Border.ContextMenu>
+                <StackPanel Spacing="2">
+                  <Border IsVisible="{Binding HasReply}" BorderThickness="2,0,0,0" BorderBrush="{DynamicResource SystemAccentColor}" Padding="6,0">
+                    <TextBlock Text="{Binding ReplyText}" Classes="hint" TextTrimming="CharacterEllipsis"/>
+                  </Border>
+                  <TextBlock Text="Пересланное сообщение" Classes="hint" IsVisible="{Binding IsForwarded}"/>
+                  <TextBlock Text="{Binding Text}" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+                  <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Failed}"/>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+                    <TextBlock Text="изм." FontSize="11" Opacity="0.7" IsVisible="{Binding Edited}"/>
+                    <TextBlock Text="{Binding Time}" FontSize="11" Opacity="0.7"/>
+                    <TextBlock Text="{Binding Status}" FontSize="11" Opacity="0.9"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <!-- Настройки поверх чата -->
+      <Border Grid.RowSpan="3" IsVisible="{Binding ShowSettings}" Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+        <ScrollViewer>
+          <StackPanel Margin="28" Spacing="14" MaxWidth="640" HorizontalAlignment="Left" DataContext="{Binding SettingsVm}">
+            <TextBlock Text="Настройки" Classes="title"/>
+            <TextBlock Classes="hint"><Run Text="Учётная запись: @"/><Run Text="{Binding Username}"/><Run Text="  ·  Сервер: "/><Run Text="{Binding Server}"/></TextBlock>
+            <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            <TextBlock Text="{Binding Info}" Classes="hint" IsVisible="{Binding Info, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+            <TextBlock Text="Блокировка" FontWeight="SemiBold" FontSize="16"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="Блокировать при бездействии, мин (0 — никогда):" VerticalAlignment="Center"/>
+              <NumericUpDown Value="{Binding AutoLockMinutes}" Minimum="0" Maximum="240" Width="120" FormatString="0"/>
+            </StackPanel>
+            <CheckBox IsChecked="{Binding LockOnMinimize}" Content="Блокировать при сворачивании окна"/>
+            <CheckBox IsChecked="{Binding WipeAfterFailures}" Content="Удалять локальные данные после 10 неверных попыток разблокировки"/>
+            <Button Content="Сохранить" Command="{Binding SaveLock}" HorizontalAlignment="Left"/>
+
+            <TextBlock Text="PIN-код (6 цифр и более)" FontWeight="SemiBold" FontSize="16"/>
+            <TextBox Text="{Binding Pin}" PasswordChar="•" Watermark="Новый PIN" MaxWidth="260" HorizontalAlignment="Left"/>
+            <TextBox Text="{Binding PinRepeat}" PasswordChar="•" Watermark="Повторите PIN" MaxWidth="260" HorizontalAlignment="Left"/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="Установить PIN" Command="{Binding SetPin}"/>
+              <Button Content="Удалить PIN" Command="{Binding RemovePin}" IsVisible="{Binding PinEnabled}"/>
+            </StackPanel>
+
+            <TextBlock Text="Устройства" FontWeight="SemiBold" FontSize="16"/>
+            <ItemsControl ItemsSource="{Binding Devices}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                    <StackPanel><TextBlock Text="{Binding Name}"/><TextBlock Classes="hint"><Run Text="{Binding Platform}"/><Run Text=" · "/><Run Text="{Binding LastSeen}"/></TextBlock></StackPanel>
+                    <Button Grid.Column="1" Content="Отключить" IsVisible="{Binding CanRevoke}"
+                            Command="{Binding $parent[ItemsControl].DataContext.Revoke}" CommandParameter="{Binding}"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Button Content="Выйти из учётной записи" Command="{Binding SignOut}" HorizontalAlignment="Left"/>
+            <TextBlock Classes="hint" Text="При выходе локальные данные и ключ на этом устройстве удаляются."/>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

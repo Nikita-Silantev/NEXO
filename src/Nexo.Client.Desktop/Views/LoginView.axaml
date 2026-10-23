@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexo.Client.Desktop.Views.LoginView">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Border Classes="card" Width="420" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+        <TextBlock Text="NEXO" Classes="title"/>
+        <TextBlock Text="Вход в учётную запись" Classes="hint"/>
+        <TextBox Text="{Binding Username}" Watermark="Ник"/>
+        <TextBox Text="{Binding Password}" PasswordChar="•" Watermark="Пароль"/>
+        <TextBlock Text="Адрес сервера" Classes="hint"/><TextBox Text="{Binding Server}" Watermark="https://nexo.example"/>
+        <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <Button Classes="primary" Content="Войти" Command="{Binding LoginCommand}" IsEnabled="{Binding NotBusy}" IsDefault="True"/>
+        <Button Classes="link" Content="Создать учётную запись" Command="{Binding GoRegister}"/>
+        <Button Classes="link" Content="Забыли пароль? Восстановить по ключу" Command="{Binding GoRecover}"/>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

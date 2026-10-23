@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexo.Client.Desktop.Views.RegisterView">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Border Classes="card" Width="420" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Регистрация" Classes="title"/>
+        <TextBlock Text="Телефон и почта не нужны. Пароль не покидает это устройство." Classes="hint"/>
+        <TextBox Text="{Binding Username}" Watermark="Ник (a–z, 0–9, _)"/>
+        <TextBox Text="{Binding DisplayName}" Watermark="Отображаемое имя"/>
+        <TextBox Text="{Binding Password}" PasswordChar="•" Watermark="Пароль (не короче 10 символов)"/>
+        <TextBox Text="{Binding Repeat}" PasswordChar="•" Watermark="Повторите пароль"/>
+        <TextBlock Text="Адрес сервера" Classes="hint"/><TextBox Text="{Binding Server}" Watermark="https://nexo.example"/>
+        <ItemsControl ItemsSource="{Binding Docs}">
+          <ItemsControl.ItemTemplate><DataTemplate><Button Classes="link" Content="{Binding Title}" Tag="{Binding Url}" Click="OnOpenDoc" HorizontalAlignment="Left"/></DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <CheckBox IsChecked="{Binding Accepted}" Content="Принимаю пользовательское соглашение, политику конфиденциальности и даю согласие на обработку персональных данных"/>
+        <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <Button Classes="primary" Content="Создать учётную запись" Command="{Binding RegisterCommand}" IsEnabled="{Binding NotBusy}" IsDefault="True"/>
+        <Button Classes="link" Content="Назад" Command="{Binding Back}"/>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

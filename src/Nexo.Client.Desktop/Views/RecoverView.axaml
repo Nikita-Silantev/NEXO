@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexo.Client.Desktop.Views.RecoverView">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Border Classes="card" Width="420" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Восстановление доступа" Classes="title"/>
+        <TextBlock Classes="hint" Text="Введите ник, ключ восстановления и новый пароль. После восстановления будет выдан новый ключ."/>
+        <TextBox Text="{Binding Username}" Watermark="Ник"/>
+        <TextBox Text="{Binding RecoveryKey}" Watermark="Ключ восстановления" AcceptsReturn="False"/>
+        <TextBox Text="{Binding NewPassword}" PasswordChar="•" Watermark="Новый пароль"/>
+        <TextBox Text="{Binding Repeat}" PasswordChar="•" Watermark="Повторите новый пароль"/>
+        <TextBox Text="{Binding SecondFactor}" Watermark="Код второго фактора (если включён)"/>
+        <CheckBox IsChecked="{Binding UseBackup}" Content="Это резервный код"/>
+        <TextBlock Text="Адрес сервера" Classes="hint"/><TextBox Text="{Binding Server}" Watermark="https://nexo.example"/>
+        <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <Button Classes="primary" Content="Восстановить" Command="{Binding Recover}" IsEnabled="{Binding NotBusy}" IsDefault="True"/>
+        <Button Classes="link" Content="Назад" Command="{Binding Back}"/>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

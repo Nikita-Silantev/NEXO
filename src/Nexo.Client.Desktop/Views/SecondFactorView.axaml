@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexo.Client.Desktop.Views.SecondFactorView">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Border Classes="card" Width="420" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Второй фактор" Classes="title"/>
+        <TextBlock Classes="hint" Text="Введите код из приложения-аутентификатора или резервный код."/>
+        <TextBox Text="{Binding Code}" Watermark="Код"/>
+        <CheckBox IsChecked="{Binding UseBackup}" Content="Это резервный код" IsVisible="{Binding BackupAvailable}"/>
+        <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <Button Classes="primary" Content="Подтвердить" Command="{Binding Confirm}" IsEnabled="{Binding NotBusy}" IsDefault="True"/>
+        <Button Classes="link" Content="Назад" Command="{Binding Back}"/>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>

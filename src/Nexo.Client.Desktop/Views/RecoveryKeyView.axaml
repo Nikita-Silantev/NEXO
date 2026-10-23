@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Nexo.Client.Desktop.Views.RecoveryKeyView">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Border Classes="card" Width="420" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Ключ восстановления" Classes="title"/>
+        <TextBlock Classes="hint" Text="Это единственный способ вернуть доступ, если вы забудете пароль. Мы не можем его восстановить. Запишите ключ на бумаге или сохраните в менеджере паролей. Он показывается один раз."/>
+        <Border Padding="14" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+          <TextBlock Text="{Binding KeyText}" FontFamily="Menlo,Consolas,monospace" FontSize="17" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+        </Border>
+        <Button Content="Скопировать" Command="{Binding Copy}"/>
+        <CheckBox IsChecked="{Binding Saved}" Content="Я сохранил(а) ключ в надёжном месте"/>
+        <Button Classes="primary" Content="Продолжить" Command="{Binding Continue}"/>
+      </StackPanel>
+    </Border>
+  </ScrollViewer>
+</UserControl>
