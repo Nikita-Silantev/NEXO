@@ -1,0 +1,20 @@
+{
+"sec:purpose": "1",
+"sec:princ": "2",
+"sec:stages": "3",
+"sec:st_Э1": "3.1",
+"sec:st_Э2": "3.2",
+"sec:st_Э3": "3.3",
+"sec:st_Э4": "3.4",
+"sec:st_Э5": "3.5",
+"sec:st_Э6": "3.6",
+"tab:stg": "1",
+"sec:repo": "4",
+"sec:rules": "5",
+"sec:change": "5.1",
+"sec:checks": "6",
+"tab:chk": "2",
+"sec:vs": "7",
+"sec:fmt": "8",
+"sec:claude": "9"
+}

@@ -162,7 +162,7 @@ message RefreshTokenRequest {
   string refresh_token = 1;
   string device_id = 2;
   google.protobuf.Timestamp timestamp = 3;    // не более 60 с от времени сервера
-  bytes signature = 4;                        // Ed25519(device_key, refresh_token || timestamp)
+  bytes signature = 4;                        // Ed25519(device_key, UTF-8(refresh_token) || UTF-8(device_id) || unix_seconds big-endian int64)
 }
 
 message ChangePasswordRequest {

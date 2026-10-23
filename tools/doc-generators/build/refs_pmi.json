@@ -1,0 +1,17 @@
+{
+"sec:obj": "1",
+"sec:goal": "2",
+"sec:req": "3",
+"sec:docs": "4",
+"sec:env": "5",
+"tab:meth": "1",
+"sec:method": "6",
+"sec:auto": "6.1",
+"tab:auto": "2",
+"sec:key": "6.2",
+"sec:load": "6.3",
+"tab:load": "3",
+"sec:matrixsec": "7",
+"tab:matrix": "4",
+"sec:accept": "8"
+}
