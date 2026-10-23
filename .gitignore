@@ -8,3 +8,5 @@ obj/
 .DS_Store
 .env
 deploy/.env
+data/
+src/Nexo.Server/appsettings.Development.json.local
