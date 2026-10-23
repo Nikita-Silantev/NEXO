@@ -58,7 +58,7 @@ public sealed class ChatQueries(UserQueries users)
     public async Task<List<Chat>> LoadAsync(DbConnection con, Guid userId, IReadOnlyCollection<Guid> ids, CancellationToken ct, DbTransaction? tx = null)
     {
         if (ids.Count == 0) return [];
-        var rows = await con.ListAsync<Row>(Select + " and c.id in @ids order by c.updated_at desc", new { u = userId, ids = ids.ToList() }, tx, ct);
+        var rows = await con.ListAsync<Row>(Select + " and c.id = any(@ids) order by c.updated_at desc", new { u = userId, ids = ids.ToArray() }, tx, ct);
         return await BuildAsync(con, userId, rows, ct, tx);
     }
 
@@ -76,8 +76,8 @@ public sealed class ChatQueries(UserQueries users)
         if (rows.Count == 0) return [];
         var chatIds = rows.Select(r => r.Id).ToList();
         var lastRows = await con.ListAsync<MessageRow>(
-            "select distinct on (chat_id) " + MessageRow.Select["select ".Length..] + " where chat_id in @ids order by chat_id, seq desc",
-            new { ids = chatIds }, tx, ct);
+            "select distinct on (chat_id) " + MessageRow.Select["select ".Length..] + " where chat_id = any(@ids) order by chat_id, seq desc",
+            new { ids = chatIds.ToArray() }, tx, ct);
         var last = lastRows.ToDictionary(x => x.ChatId);
         var peerIds = rows.Where(r => r.PeerId.HasValue).Select(r => r.PeerId!.Value).Distinct().ToList();
         var peers = await users.ProfilesAsync(con, userId, peerIds, ct, tx);

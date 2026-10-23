@@ -45,8 +45,8 @@ public sealed class UserQueries
               from users u
               join privacy_settings p on p.user_id = u.id
               left join contact_links cl on (cl.requester_id = @v and cl.addressee_id = u.id) or (cl.requester_id = u.id and cl.addressee_id = @v)
-              where u.id in @ids",
-            new { v = viewer, ids = ids.ToList() }, tx, ct);
+              where u.id = any(@ids)",
+            new { v = viewer, ids = ids.ToArray() }, tx, ct);
         foreach (var r in rows)
         {
             var self = r.Id == viewer;

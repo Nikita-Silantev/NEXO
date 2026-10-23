@@ -176,8 +176,8 @@ public sealed class MessageServiceImpl(NpgsqlDataSource ds, UpdateJournal journa
             // Удалять у всех можно только свои сообщения (права модераторов групп – этап Э2).
             var rows = await con.ListAsync<(Guid Id, long Seq)>(
                 @"update messages set body = null, entities = null, deleted_at = now()
-                  where chat_id = @c and sender_id = @s and deleted_at is null and id in @ids returning id, seq",
-                new { c = chatId, s = a.UserId, ids }, tx, ct);
+                  where chat_id = @c and sender_id = @s and deleted_at is null and id = any(@ids) returning id, seq",
+                new { c = chatId, s = a.UserId, ids = ids.ToArray() }, tx, ct);
             if (rows.Count > 0)
             {
                 var upd = new MessageDeletedUpdate { ChatId = chatId.ToString() };
@@ -190,7 +190,7 @@ public sealed class MessageServiceImpl(NpgsqlDataSource ds, UpdateJournal journa
         {
             // «Удалить у себя»: на других устройствах пользователя сообщение убирается обновлением.
             // Ограничение Э1: схема БД не хранит скрытые сообщения, поэтому после переустановки они вернутся из истории.
-            var rows = await con.ListAsync<(Guid Id, long Seq)>("select id, seq from messages where chat_id = @c and id in @ids", new { c = chatId, ids }, tx, ct);
+            var rows = await con.ListAsync<(Guid Id, long Seq)>("select id, seq from messages where chat_id = @c and id = any(@ids)", new { c = chatId, ids = ids.ToArray() }, tx, ct);
             if (rows.Count > 0)
             {
                 var upd = new MessageDeletedUpdate { ChatId = chatId.ToString() };
@@ -249,7 +249,7 @@ public sealed class MessageServiceImpl(NpgsqlDataSource ds, UpdateJournal journa
         var ids = r.MessageIds.Select(CallExtensions.ParseId).Distinct().Take(100).ToList();
         await using var con = await ds.OpenAsync(ct);
         await RequireMemberAsync(con, chatId, a.UserId, null, ct);
-        var rows = ids.Count == 0 ? [] : await con.ListAsync<MessageRow>(MessageRow.Select + " where chat_id = @c and id in @ids order by seq", new { c = chatId, ids }, ct: ct);
+        var rows = ids.Count == 0 ? [] : await con.ListAsync<MessageRow>(MessageRow.Select + " where chat_id = @c and id = any(@ids) order by seq", new { c = chatId, ids = ids.ToArray() }, ct: ct);
         var res = new GetMessagesResponse();
         foreach (var m in rows) res.Messages.Add(MessageMapper.ToProto(m));
         return res;
@@ -301,7 +301,7 @@ public sealed class MessageServiceImpl(NpgsqlDataSource ds, UpdateJournal journa
         await using var con = await ds.OpenAsync(ct);
         await using var tx = await con.BeginTransactionAsync(ct);
         await RequireMemberAsync(con, from, a.UserId, tx, ct);
-        var rows = (await con.ListAsync<MessageRow>(MessageRow.Select + " where chat_id = @c and id in @ids and deleted_at is null", new { c = from, ids }, tx, ct))
+        var rows = (await con.ListAsync<MessageRow>(MessageRow.Select + " where chat_id = @c and id = any(@ids) and deleted_at is null", new { c = from, ids = ids.ToArray() }, tx, ct))
             .ToDictionary(x => x.Id);
         var res = new ForwardMessagesResponse();
         var pendingAll = new List<(Guid, Update)>();
