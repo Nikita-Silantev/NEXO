@@ -128,6 +128,7 @@ public sealed class MainViewModel : FormVm
         set
         {
             if (ReferenceEquals(_selected, value)) return;
+            if (_reloadingChats && value is null) return;   // ListBox сбрасывает выбор при очистке списка – это не действие пользователя
             this.RaiseAndSetIfChanged(ref _selected, value);
             this.RaisePropertyChanged(nameof(HasSelection)); this.RaisePropertyChanged(nameof(NoSelection));
             this.RaisePropertyChanged(nameof(ChatTitle));
@@ -177,6 +178,7 @@ public sealed class MainViewModel : FormVm
 
     // ---- список чатов ----
     private string _chatFilter = "";
+    private bool _reloadingChats;
     private CancellationTokenSource? _searchCts;
 
     /// <summary>Фильтр списка чатов и (от 3 символов) поиск пользователей на сервере с задержкой 300 мс после последнего символа.</summary>
@@ -200,12 +202,22 @@ public sealed class MainViewModel : FormVm
         var selectedId = _selected?.ChatId;
         var items = _s.Db.ListChats(ShowArchive).Select(c => new ChatItemViewModel(c, _s.Data.UserId) { Owner = this })
             .Where(c => _chatFilter.Length == 0 || c.Title.Contains(_chatFilter.TrimStart('@'), StringComparison.OrdinalIgnoreCase)).ToList();
-        Chats.Clear();
-        foreach (var i in items) Chats.Add(i);
+        _reloadingChats = true;
+        try
+        {
+            Chats.Clear();
+            foreach (var i in items) Chats.Add(i);
+        }
+        finally { _reloadingChats = false; }
         if (selectedId is not null)
         {
             var again = Chats.FirstOrDefault(c => c.ChatId == selectedId);
-            if (again is not null && !ReferenceEquals(again, _selected)) { _selected = again; this.RaisePropertyChanged(nameof(Selected)); }
+            if (again is not null && !ReferenceEquals(again, _selected))
+            {
+                _selected = again;
+                this.RaisePropertyChanged(nameof(Selected)); this.RaisePropertyChanged(nameof(HasSelection));
+                this.RaisePropertyChanged(nameof(NoSelection)); this.RaisePropertyChanged(nameof(ChatTitle));
+            }
         }
     }
 
