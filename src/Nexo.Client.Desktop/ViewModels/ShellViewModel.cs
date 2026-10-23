@@ -55,7 +55,7 @@ public sealed class ShellViewModel : VmBase
     }
 
     public void ShowRecoveryKey(string keyText, SessionData session, string password) =>
-        Content = new RecoveryKeyViewModel(this, keyText, () => _ = OpenNewAsync(session, password, false));
+        Content = new RecoveryKeyViewModel(this, keyText, () => OpenNewAsync(session, password, false));
 
     /// <summary>Создаёт хранилище ключа (секрет – пароль учётной записи), открывает локальную БД и сессию.</summary>
     private async Task OpenNewAsync(SessionData data, string password, bool needDocs)

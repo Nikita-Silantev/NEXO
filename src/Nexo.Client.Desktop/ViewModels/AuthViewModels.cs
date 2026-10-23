@@ -84,14 +84,15 @@ public sealed class RegisterViewModel : FormVm
     });
 }
 
-public sealed class RecoveryKeyViewModel : VmBase
+public sealed class RecoveryKeyViewModel : FormVm
 {
     private bool _saved;
-    public RecoveryKeyViewModel(ShellViewModel shell, string keyText, Action proceed)
+    public RecoveryKeyViewModel(ShellViewModel shell, string keyText, Func<Task> proceed)
     {
         KeyText = keyText;
         Copy = ReactiveCommand.CreateFromTask(async () => await App.CopyToClipboardAsync(keyText));
-        Continue = ReactiveCommand.Create(proceed, this.WhenAnyValue(x => x.Saved));
+        // Ошибки открытия сессии показываются на экране, а не теряются.
+        Continue = ReactiveCommand.CreateFromTask(() => RunAsync(proceed), this.WhenAnyValue(x => x.Saved));
     }
     public string KeyText { get; }
     public bool Saved { get => _saved; set => this.RaiseAndSetIfChanged(ref _saved, value); }

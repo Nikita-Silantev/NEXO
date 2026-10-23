@@ -9,6 +9,7 @@
         </Border>
         <Button Content="Скопировать" Command="{Binding Copy}"/>
         <CheckBox IsChecked="{Binding Saved}" Content="Я сохранил(а) ключ в надёжном месте"/>
+        <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
         <Button Classes="primary" Content="Продолжить" Command="{Binding Continue}"/>
       </StackPanel>
     </Border>
