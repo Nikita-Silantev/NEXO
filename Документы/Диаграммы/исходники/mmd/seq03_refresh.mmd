@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    participant C as Клиент
+    participant API as Сервер NEXO
+    participant DB as PostgreSQL
+    C->>API: Любой вызов с access-токеном
+    API-->>C: Ошибка TOKEN_EXPIRED
+    C->>C: Подпись Ed25519(refresh_token, timestamp) ключом устройства
+    C->>API: RefreshToken(refresh_token, device_id, timestamp, signature)
+    API->>DB: Поиск сессии по SHA-256 токена
+    alt Токен найден и не использован
+        API->>API: Проверка подписи и времени
+        API->>DB: Пометить старую сессию rotated, создать новую в том же семействе
+        API-->>C: TokenPair (новые access и refresh)
+    else Токен уже использован
+        API->>DB: Отозвать всё семейство сессий (REUSE_DETECTED)
+        API-->>C: Ошибка REFRESH_REUSE_DETECTED, требуется вход
+    end

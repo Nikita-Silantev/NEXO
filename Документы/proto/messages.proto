@@ -1,0 +1,242 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Сообщения.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+import "crypto.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+message TextContent {
+  string text = 1;                            // до 4096 символов
+  repeated TextEntity entities = 2;
+}
+
+message Attachment {
+  string file_id = 1;
+  string caption = 2;
+}
+
+message MediaContent {
+  repeated Attachment attachments = 1;        // 1..10
+  string text = 2;
+  repeated TextEntity entities = 3;
+}
+
+message VoiceContent {
+  string file_id = 1;
+  int32 duration_ms = 2;
+  bytes waveform = 3;                         // 64 значения амплитуды 0..255
+}
+
+message VideoNoteContent {
+  string file_id = 1;
+  int32 duration_ms = 2;                      // не более 60000
+}
+
+message SystemContent {
+  enum Event {
+    EVENT_UNSPECIFIED = 0;
+    EVENT_CHAT_CREATED = 1;
+    EVENT_MEMBER_JOINED = 2;
+    EVENT_MEMBER_LEFT = 3;
+    EVENT_MEMBER_ADDED = 4;
+    EVENT_MEMBER_REMOVED = 5;
+    EVENT_CHAT_RENAMED = 6;
+    EVENT_AVATAR_CHANGED = 7;
+    EVENT_TTL_CHANGED = 8;
+    EVENT_MESSAGE_PINNED = 9;
+    EVENT_CALL_STARTED = 10;
+    EVENT_CALL_ENDED = 11;
+    EVENT_SECRET_CHAT_STARTED = 12;
+  }
+  Event event = 1;
+  string actor_id = 2;
+  repeated string target_ids = 3;
+  map<string, string> params = 4;             // параметры для локализованного шаблона
+}
+
+message SecretContent {
+  SecretEnvelope envelope = 1;
+}
+
+// Содержимое сообщения. Вид определяется выбранным полем.
+message MessageContent {
+  oneof content {
+    TextContent text = 1;
+    MediaContent media = 2;
+    VoiceContent voice = 3;
+    VideoNoteContent video_note = 4;
+    SystemContent system = 5;
+    SecretContent secret = 6;
+  }
+}
+
+message ForwardOrigin {
+  string from_user_id = 1;
+  string from_chat_id = 2;
+  string from_message_id = 3;
+  google.protobuf.Timestamp original_date = 4;
+  string hidden_name = 5;                     // если отправитель скрыл профиль
+}
+
+message ReactionCount {
+  string emoji = 1;
+  int32 count = 2;
+  bool chosen_by_me = 3;
+}
+
+message Message {
+  string message_id = 1;
+  string chat_id = 2;
+  int64 seq = 3;
+  string sender_id = 4;
+  string sender_device_id = 5;
+  string client_msg_id = 6;
+  MessageContent content = 7;
+  string reply_to_id = 8;
+  ForwardOrigin forward_origin = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp edited_at = 11;
+  bool deleted = 12;                          // надгробие: содержимое отсутствует
+  int32 ttl_seconds = 13;                     // 0 — без автоудаления
+  google.protobuf.Timestamp expires_at = 14;  // задан после первого прочтения
+  google.protobuf.Timestamp first_read_at = 15;
+  bool pinned = 16;
+  repeated ReactionCount reactions = 17;
+}
+
+service MessageService {
+  // Отправляет сообщение. Идемпотентно по (chat_id, client_msg_id): повтор возвращает исходное сообщение.
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  // Изменяет текст сообщения в течение 48 часов (не для секретных чатов).
+  rpc EditMessage(EditMessageRequest) returns (Message);
+  // Удаляет сообщения для себя или для всех.
+  rpc DeleteMessages(DeleteMessagesRequest) returns (google.protobuf.Empty);
+  // История чата страницами относительно якорного seq.
+  rpc GetHistory(GetHistoryRequest) returns (GetHistoryResponse);
+  // Сообщения по идентификаторам.
+  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+  // Отмечает чат прочитанным до seq включительно; запускает таймеры автоудаления.
+  rpc MarkRead(MarkReadRequest) returns (google.protobuf.Empty);
+  // Закрепляет или открепляет сообщение.
+  rpc PinMessage(PinMessageRequest) returns (google.protobuf.Empty);
+  // Ставит или снимает реакцию.
+  rpc SetReaction(SetReactionRequest) returns (google.protobuf.Empty);
+  // Пересылает сообщения в другой чат.
+  rpc ForwardMessages(ForwardMessagesRequest) returns (ForwardMessagesResponse);
+  // Полнотекстовый поиск на сервере (кроме секретных чатов).
+  rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
+  // Эфемерный сигнал «печатает…», «записывает кружок…».
+  rpc SetTyping(SetTypingRequest) returns (google.protobuf.Empty);
+}
+
+message SendMessageRequest {
+  string chat_id = 1;
+  string client_msg_id = 2;                   // UUIDv7, генерируется клиентом при создании сообщения
+  MessageContent content = 3;
+  string reply_to_id = 4;
+  int32 ttl_seconds = 5;                      // 0 — взять значение чата по умолчанию
+}
+
+message SendMessageResponse {
+  Message message = 1;
+  bool duplicate = 2;                         // true, если сообщение уже было принято ранее
+}
+
+message EditMessageRequest {
+  string chat_id = 1;
+  string message_id = 2;
+  TextContent text = 3;
+}
+
+message DeleteMessagesRequest {
+  string chat_id = 1;
+  repeated string message_ids = 2;
+  bool for_everyone = 3;
+}
+
+message GetHistoryRequest {
+  string chat_id = 1;
+  int64 anchor_seq = 2;                       // 0 — от последнего сообщения
+  enum Direction {
+    DIRECTION_UNSPECIFIED = 0;
+    DIRECTION_BEFORE = 1;                     // сообщения старше якоря
+    DIRECTION_AFTER = 2;                      // сообщения новее якоря
+    DIRECTION_AROUND = 3;
+  }
+  Direction direction = 3;
+  int32 limit = 4;                            // 1..100
+}
+
+message GetHistoryResponse {
+  repeated Message messages = 1;              // по возрастанию seq
+  bool has_more_before = 2;
+  bool has_more_after = 3;
+}
+
+message GetMessagesRequest {
+  string chat_id = 1;
+  repeated string message_ids = 2;
+}
+
+message GetMessagesResponse { repeated Message messages = 1; }
+
+message MarkReadRequest {
+  string chat_id = 1;
+  int64 up_to_seq = 2;
+}
+
+message PinMessageRequest {
+  string chat_id = 1;
+  string message_id = 2;
+  bool pinned = 3;
+}
+
+message SetReactionRequest {
+  string chat_id = 1;
+  string message_id = 2;
+  string emoji = 3;
+  bool present = 4;
+}
+
+message ForwardMessagesRequest {
+  string from_chat_id = 1;
+  repeated string message_ids = 2;
+  string to_chat_id = 3;
+  repeated string client_msg_ids = 4;         // по одному на каждое пересылаемое сообщение
+}
+
+message ForwardMessagesResponse { repeated Message messages = 1; }
+
+message SearchMessagesRequest {
+  string query = 1;
+  string chat_id = 2;                         // пусто — по всем чатам
+  PageRequest page = 3;
+}
+
+message SearchHit {
+  Message message = 1;
+  string snippet = 2;
+}
+
+message SearchMessagesResponse {
+  repeated SearchHit hits = 1;
+  PageInfo page = 2;
+}
+
+message SetTypingRequest {
+  enum Action {
+    ACTION_UNSPECIFIED = 0;
+    ACTION_TYPING = 1;
+    ACTION_RECORDING_VOICE = 2;
+    ACTION_RECORDING_VIDEO_NOTE = 3;
+    ACTION_UPLOADING_FILE = 4;
+    ACTION_CANCEL = 5;
+  }
+  string chat_id = 1;
+  Action action = 2;
+}

@@ -1,0 +1,105 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Звонки.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+message CallParticipant {
+  string user_id = 1;
+  string device_id = 2;
+  google.protobuf.Timestamp joined_at = 3;
+  google.protobuf.Timestamp left_at = 4;
+  bool video_enabled = 5;
+  bool screen_sharing = 6;
+}
+
+message Call {
+  string call_id = 1;
+  string chat_id = 2;
+  string initiator_id = 3;
+  CallKind kind = 4;
+  CallState state = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp answered_at = 7;
+  google.protobuf.Timestamp ended_at = 8;
+  repeated CallParticipant participants = 9;
+}
+
+message IceServer {
+  repeated string urls = 1;
+  string username = 2;
+  string credential = 3;
+}
+
+// Данные для подключения к медиасерверу (SFU).
+message JoinInfo {
+  string sfu_url = 1;                         // wss://…
+  string join_token = 2;                      // JWT медиасервера, срок жизни 5 минут
+  google.protobuf.Timestamp expires_at = 3;
+  repeated IceServer ice_servers = 4;
+}
+
+service CallService {
+  // Начинает звонок в чате и приглашает участников; возвращает данные для подключения.
+  rpc StartCall(StartCallRequest) returns (StartCallResponse);
+  // Присоединение к звонку (ответ на входящий).
+  rpc JoinCall(JoinCallRequest) returns (JoinInfo);
+  // Отклонение входящего звонка.
+  rpc DeclineCall(CallRef) returns (google.protobuf.Empty);
+  // Выход из звонка.
+  rpc LeaveCall(CallRef) returns (google.protobuf.Empty);
+  // Завершение звонка для всех (инициатор или администратор).
+  rpc EndCall(CallRef) returns (google.protobuf.Empty);
+  // Сообщает серверу состояние камеры и демонстрации экрана для отображения у других.
+  rpc UpdateParticipantState(UpdateParticipantStateRequest) returns (google.protobuf.Empty);
+  // Приглашает дополнительных участников в идущий звонок.
+  rpc InviteToCall(InviteToCallRequest) returns (google.protobuf.Empty);
+  // Данные звонка.
+  rpc GetCall(CallRef) returns (Call);
+  // История звонков чата.
+  rpc ListCalls(ListCallsRequest) returns (ListCallsResponse);
+}
+
+message CallRef { string call_id = 1; }
+
+message StartCallRequest {
+  string chat_id = 1;
+  CallKind kind = 2;
+  string client_call_id = 3;                  // идемпотентность
+}
+
+message StartCallResponse {
+  Call call = 1;
+  JoinInfo join = 2;
+}
+
+message JoinCallRequest {
+  string call_id = 1;
+  bool video_enabled = 2;
+}
+
+message UpdateParticipantStateRequest {
+  string call_id = 1;
+  bool video_enabled = 2;
+  bool screen_sharing = 3;
+}
+
+message InviteToCallRequest {
+  string call_id = 1;
+  repeated string user_ids = 2;
+}
+
+message ListCallsRequest {
+  string chat_id = 1;
+  PageRequest page = 2;
+}
+
+message ListCallsResponse {
+  repeated Call calls = 1;
+  PageInfo page = 2;
+}

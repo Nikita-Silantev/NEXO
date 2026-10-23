@@ -1,0 +1,19 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Pending: Пользователь отправил
+    Pending --> Sent: Сервер подтвердил (seq)
+    Pending --> Pending: Обрыв связи, повтор с тем же client_msg_id
+    Pending --> Failed: Отклонено сервером (права, длина)
+    Failed --> Pending: Повторить
+    Sent --> Delivered: AckUpdates получателя
+    Delivered --> Read: MarkRead получателя
+    Sent --> Read: MarkRead
+    Read --> Expiring: Запущен таймер ttl
+    Expiring --> Deleted: expires_at достигнут
+    Sent --> Edited: EditMessage
+    Edited --> Delivered
+    Sent --> Deleted: DeleteMessages
+    Delivered --> Deleted: DeleteMessages
+    Read --> Deleted: DeleteMessages
+    Sent --> Deleted: Не прочитано 30 суток при ttl
+    Deleted --> [*]

@@ -1,0 +1,108 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Администрирование и модерация (роль MODERATOR / ADMIN).
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+import "moderation.proto";
+import "users.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+message SanctionInfo {
+  string sanction_id = 1;
+  string user_id = 2;
+  SanctionKind kind = 3;
+  string reason = 4;
+  string report_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  google.protobuf.Timestamp revoked_at = 8;
+}
+
+message ModerationTerm {
+  string term_id = 1;
+  TermCategory category = 2;
+  string pattern = 3;
+  bool is_regex = 4;
+  bool active = 5;
+}
+
+message LegalRequest {
+  string request_id = 1;
+  google.protobuf.Timestamp received_at = 2;
+  string authority = 3;
+  string basis = 4;
+  string scope = 5;
+  LegalStatus status = 6;
+  string notes = 7;
+  google.protobuf.Timestamp completed_at = 8;
+}
+
+// Все вызовы AdminService записываются в audit_log.
+service AdminService {
+  // Очередь жалоб.
+  rpc ListReports(ListReportsRequest) returns (ListReportsResponse);
+  // Закрывает жалобу с решением.
+  rpc ResolveReport(ResolveReportRequest) returns (Report);
+  // Применяет меру к учётной записи.
+  rpc ApplySanction(ApplySanctionRequest) returns (SanctionInfo);
+  // Снимает меру.
+  rpc RevokeSanction(RevokeSanctionRequest) returns (google.protobuf.Empty);
+  // Сводка по пользователю для рассмотрения жалобы (без содержимого секретных чатов).
+  rpc GetUserOverview(GetUserOverviewRequest) returns (GetUserOverviewResponse);
+  // Словарь фильтра статусов.
+  rpc ListTerms(ListTermsRequest) returns (ListTermsResponse);
+  rpc UpsertTerm(ModerationTerm) returns (ModerationTerm);
+  rpc DeleteTerm(DeleteTermRequest) returns (google.protobuf.Empty);
+  // Реестр обращений уполномоченных органов (только ADMIN).
+  rpc ListLegalRequests(ListLegalRequestsRequest) returns (ListLegalRequestsResponse);
+  rpc CreateLegalRequest(LegalRequest) returns (LegalRequest);
+  rpc UpdateLegalRequest(LegalRequest) returns (LegalRequest);
+}
+
+message ListReportsRequest {
+  ReportStatus status = 1;
+  PageRequest page = 2;
+}
+message ListReportsResponse {
+  repeated Report reports = 1;
+  PageInfo page = 2;
+}
+message ResolveReportRequest {
+  string report_id = 1;
+  bool actioned = 2;
+  string note = 3;
+}
+message ApplySanctionRequest {
+  string user_id = 1;
+  SanctionKind kind = 2;
+  string reason = 3;
+  string report_id = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+message RevokeSanctionRequest { string sanction_id = 1; }
+message GetUserOverviewRequest { string user_id = 1; }
+message GetUserOverviewResponse {
+  UserProfile profile = 1;
+  AccountState state = 2;
+  google.protobuf.Timestamp registered_at = 3;
+  int32 open_reports_against = 4;
+  repeated SanctionInfo sanctions = 5;
+}
+message ListTermsRequest {
+  TermCategory category = 1;
+  PageRequest page = 2;
+}
+message ListTermsResponse {
+  repeated ModerationTerm terms = 1;
+  PageInfo page = 2;
+}
+message DeleteTermRequest { string term_id = 1; }
+message ListLegalRequestsRequest { PageRequest page = 1; }
+message ListLegalRequestsResponse {
+  repeated LegalRequest requests = 1;
+  PageInfo page = 2;
+}

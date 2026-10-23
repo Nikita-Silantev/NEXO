@@ -1,0 +1,8 @@
+.idea/
+.vs/
+_to_delete/
+bin/
+obj/
+*.user
+*.suo
+.DS_Store

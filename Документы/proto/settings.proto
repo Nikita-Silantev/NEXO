@@ -1,0 +1,41 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Синхронизируемые настройки.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+// Ключи настроек определены в документе «Описание протокола», приложение «Реестр ключей настроек».
+message SettingEntry {
+  string key = 1;                             // например "theme.active", "hotkeys.map", "ui.density"
+  string value_json = 2;                      // JSON до 16 КиБ
+  int64 version = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+message SettingWrite {
+  string key = 1;
+  string value_json = 2;
+  int64 expected_version = 3;                 // 0 — создать; иначе должна совпасть с текущей
+  bool delete = 4;
+}
+
+service SettingsService {
+  // Читает настройки (все или изменённые после указанной версии).
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+  // Записывает пакет настроек с оптимистической блокировкой.
+  rpc PutSettings(PutSettingsRequest) returns (PutSettingsResponse);
+}
+
+message GetSettingsRequest {
+  repeated string keys = 1;                   // пусто — все
+  google.protobuf.Timestamp changed_since = 2;
+}
+message GetSettingsResponse { repeated SettingEntry entries = 1; }
+message PutSettingsRequest { repeated SettingWrite writes = 1; }
+message PutSettingsResponse {
+  repeated SettingEntry applied = 1;
+  repeated SettingEntry conflicts = 2;        // текущие значения при несовпадении версии
+}

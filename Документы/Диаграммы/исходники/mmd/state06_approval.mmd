@@ -1,0 +1,9 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Pending: Login с нового устройства
+    Pending --> Approved: ResolveLoginApproval(approve = true)
+    Pending --> Denied: ResolveLoginApproval(approve = false)
+    Pending --> Expired: Истёк срок 10 минут
+    Approved --> [*]: Выдан TokenPair
+    Denied --> [*]
+    Expired --> [*]

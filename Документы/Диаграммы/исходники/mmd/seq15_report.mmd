@@ -1,0 +1,23 @@
+sequenceDiagram
+    autonumber
+    actor U as Пользователь
+    participant C as Клиент
+    participant API as Сервер NEXO
+    participant DB as PostgreSQL
+    actor M as Модератор
+    U->>C: «Пожаловаться» на сообщение
+    C->>API: CreateReport(target_kind, target_id, reason, details, evidence_json)
+    API->>DB: INSERT reports (status = OPEN)
+    API-->>C: Report
+    M->>API: ListReports(status = OPEN)
+    API-->>M: Очередь жалоб
+    M->>API: GetUserOverview(user_id)
+    API-->>M: Профиль, санкции, число жалоб
+    alt Нарушение подтверждено
+        M->>API: ApplySanction(user_id, kind, reason, report_id)
+        M->>API: ResolveReport(report_id, actioned = true, note)
+    else Нарушения нет
+        M->>API: ResolveReport(report_id, actioned = false, note)
+    end
+    API->>DB: Запись в audit_log
+    API--)U: Уведомление о результате рассмотрения

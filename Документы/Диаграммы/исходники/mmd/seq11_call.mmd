@@ -1,0 +1,23 @@
+sequenceDiagram
+    autonumber
+    participant A as Инициатор
+    participant API as Сервер NEXO
+    participant SFU as Медиасервер
+    participant B as Участник
+    A->>API: StartCall(chat_id, kind = VIDEO, client_call_id)
+    API->>SFU: Создать комнату, выпустить токены
+    API-->>A: StartCallResponse(call, join: sfu_url, join_token)
+    A->>SFU: Подключение по WebRTC с токеном
+    API--)B: SubscribeEvent(update: incoming_call), push-уведомление
+    B->>API: JoinCall(call_id, video_enabled = true)
+    API-->>B: JoinInfo(sfu_url, join_token, ice_servers)
+    B->>SFU: Подключение по WebRTC с токеном
+    SFU-->>API: Событие комнаты: участник вошёл
+    API--)A: SubscribeEvent(update: call_state)
+    A->>SFU: Публикация экрана
+    A->>API: UpdateParticipantState(call_id, screen_sharing = true)
+    API--)B: SubscribeEvent(update: call_state)
+    B->>API: LeaveCall(call_id)
+    A->>API: EndCall(call_id)
+    API->>SFU: Закрыть комнату
+    API--)B: SubscribeEvent(update: call_state, ENDED)

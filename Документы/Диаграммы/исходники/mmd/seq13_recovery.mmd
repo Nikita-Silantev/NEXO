@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    actor U as Пользователь
+    participant C as Клиент
+    participant API as Сервер NEXO
+    participant DB as PostgreSQL
+    U->>C: Вводит ник и ключ восстановления
+    C->>API: GetPowChallenge(PURPOSE_RECOVER)
+    API-->>C: Задача
+    C->>C: Решение, расчёт ключей: HKDF(RecoveryKey), новый AuthKey, новый ключ восстановления
+    C->>API: RecoverAccount(username, recovery_verifier_key, new_auth_key, new_recovery_verifier_key, pow, device)
+    API->>DB: Проверка верификатора ключа восстановления
+    alt TOTP включён, но кода нет
+        API-->>C: delayed_until = now() + 72 часа, уведомление на все устройства
+    else Проверка пройдена
+        API->>DB: Новый верификатор пароля и ключа, отозвать все сессии и устройства
+        API->>DB: auth_events: RECOVERY_KEY_USED
+        API-->>C: TokenPair
+        C->>U: Показ нового ключа восстановления
+    end
+    Note over API,DB: Секретные чаты и их ключи при восстановлении не возвращаются

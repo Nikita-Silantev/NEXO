@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    actor U as Пользователь
+    participant C as Клиент NEXO
+    participant API as Сервер NEXO
+    participant DB as PostgreSQL
+    U->>C: Ввод ника, имени, пароля, принятие документов
+    C->>API: GetPowChallenge(PURPOSE_REGISTER)
+    API-->>C: challenge_id, challenge, difficulty_bits
+    C->>C: Подбор nonce (SHA-256 с нулевыми битами)
+    C->>API: CheckUsername(username)
+    API->>DB: Поиск ника в users
+    API-->>C: available = true
+    C->>C: kdf_salt, RecoveryKey (256 бит), ключ устройства Ed25519
+    C->>C: MasterKey = Argon2id(пароль, kdf_salt), AuthKey = HKDF(MasterKey)
+    C->>API: Register(username, kdf_salt, auth_key, recovery_verifier_key, pow, device, accepted_documents)
+    API->>API: Проверка PoW, ника, документов, лимита регистраций с IP
+    API->>DB: INSERT users, privacy_settings, devices, sessions, consent_records
+    API-->>C: RegisterResponse(user_id, tokens)
+    C->>U: Показ ключа восстановления, требование подтвердить сохранение
+    C->>API: Subscribe(last_update_seq = 0)

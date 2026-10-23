@@ -1,0 +1,78 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Устройства и безопасность аккаунта.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+message DeviceSummary {
+  string device_id = 1;
+  string name = 2;
+  DevicePlatform platform = 3;
+  string app_version = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp last_seen_at = 6;
+  string last_ip_masked = 7;                  // последний октет скрыт
+  bool is_current = 8;
+}
+
+message AuthEvent {
+  int64 id = 1;
+  AuthEventKind kind = 2;
+  string device_id = 3;
+  string ip_masked = 4;
+  string user_agent = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message LoginApproval {
+  string approval_id = 1;
+  string requester_name = 2;
+  DevicePlatform requester_platform = 3;
+  string requester_ip_masked = 4;
+  string code = 5;
+  ApprovalStatus status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  bytes requester_pubkey = 9;
+}
+
+service DeviceService {
+  // Список активных устройств пользователя.
+  rpc ListDevices(google.protobuf.Empty) returns (ListDevicesResponse);
+  // Переименование устройства.
+  rpc RenameDevice(RenameDeviceRequest) returns (google.protobuf.Empty);
+  // Отзыв устройства: завершает его сессии, закрывает секретные чаты, привязанные к нему.
+  rpc RevokeDevice(RevokeDeviceRequest) returns (google.protobuf.Empty);
+  // Регистрация push-токена текущего устройства.
+  rpc RegisterPushToken(RegisterPushTokenRequest) returns (google.protobuf.Empty);
+  // История входов и событий безопасности.
+  rpc ListAuthEvents(ListAuthEventsRequest) returns (ListAuthEventsResponse);
+  // Ожидающие запросы подтверждения входа.
+  rpc ListLoginApprovals(google.protobuf.Empty) returns (ListLoginApprovalsResponse);
+  // Подтверждение или отклонение входа с нового устройства. Подтверждение подписывается ключом текущего устройства.
+  rpc ResolveLoginApproval(ResolveLoginApprovalRequest) returns (google.protobuf.Empty);
+}
+
+message ListDevicesResponse { repeated DeviceSummary devices = 1; }
+message RenameDeviceRequest { string device_id = 1; string name = 2; }
+message RevokeDeviceRequest { string device_id = 1; }
+message RegisterPushTokenRequest {
+  PushProvider provider = 1;
+  string token = 2;
+}
+message ListAuthEventsRequest { PageRequest page = 1; }
+message ListAuthEventsResponse {
+  repeated AuthEvent events = 1;
+  PageInfo page = 2;
+}
+message ListLoginApprovalsResponse { repeated LoginApproval approvals = 1; }
+message ResolveLoginApprovalRequest {
+  string approval_id = 1;
+  bool approve = 2;
+  bytes signature = 3;                        // Ed25519(device_key, approval_id || requester_pubkey || code); при отказе не требуется
+}

@@ -1,0 +1,30 @@
+sequenceDiagram
+    autonumber
+    actor U as Пользователь
+    participant C as Клиент
+    participant API as Сервер NEXO
+    participant DB as PostgreSQL
+    participant H as Горячее хранилище
+    participant K as Холодное хранилище
+    participant W as Обработчик
+    U->>C: Нажимает «Скачать»
+    C->>API: GetDownloadUrl(file_id, ORIGINAL)
+    API->>DB: Уровень хранения файла
+    alt HOT
+        API-->>C: url, tier = HOT
+        C->>H: GET файл
+    else COLD
+        API-->>C: Ошибка FILE_RESTORING
+        C->>API: RequestRestore(file_id)
+        API->>DB: tier = RESTORING, задание восстановления
+        API-->>C: estimated_ready_at
+        C->>U: «Файл готовится, сообщим, когда будет готов»
+        API-)W: Задание восстановления
+        W->>K: Прочитать объект
+        W->>H: Записать объект
+        W->>DB: tier = HOT, last_accessed_at = now()
+        API--)C: SubscribeEvent(update: file_ready), push-уведомление
+        C->>API: GetDownloadUrl(file_id, ORIGINAL)
+        API-->>C: url, tier = HOT
+        C->>H: GET файл
+    end

@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    actor U as Пользователь
+    participant C as Клиент
+    participant API as Сервер NEXO
+    participant S3 as Хранилище S3
+    U->>C: Удерживает кнопку кружка
+    C->>API: SetTyping(chat_id, ACTION_RECORDING_VIDEO_NOTE)
+    C->>C: Захват камеры и микрофона, кадр 1:1, H.264 и AAC, не более 60 с
+    U->>C: Отпускает кнопку
+    C->>API: InitUpload(kind = VIDEO_NOTE, size, sha256)
+    API-->>C: file_id, upload_id, части
+    C->>S3: PUT части по временным адресам
+    C->>API: CompleteUpload(upload_id, parts, sha256)
+    API-->>C: FileInfo(state = PROCESSING)
+    C->>API: SendMessage(chat_id, client_msg_id, content.video_note)
+    API-->>C: Message(seq)
+    Note over C,API: Сообщение доставляется получателям, воспроизведение после готовности файла

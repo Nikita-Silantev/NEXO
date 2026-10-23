@@ -1,0 +1,14 @@
+digraph G { rankdir=TB; splines=ortho; nodesep=0.4; ranksep=0.5; pad=0.3; bgcolor=white; compound=true;
+ node [shape=box, style="filled,rounded", fillcolor=white, fontname="Times New Roman", fontsize=14, width=3.2];
+ subgraph cluster_ui { label="Уровень представления (Avalonia, MVVM, ReactiveUI)"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  v [label="Представления и стили\nтемы, пузыри, анимации"]; vm [label="Модели представления\nкоманды, горячие клавиши"]; }
+ subgraph cluster_app { label="Прикладной уровень (общий код .NET)"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  a1 [label="Службы чатов, сообщений,\nконтактов, папок"]; a2 [label="Движок синхронизации\nSubscribe, GetDifference"]; a3 [label="Очередь исходящих (outbox)"]; a4 [label="Медиа: загрузка, скачивание,\nзапись кружков"]; a5 [label="Звонки"]; }
+ subgraph cluster_core { label="Ядро (общий код .NET)"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  k1 [label="Криптография\nArgon2id, X3DH, Double Ratchet"]; k2 [label="Транспорт gRPC / gRPC-Web"]; k3 [label="Локальное хранилище\nSQLite + SQLCipher, FTS5"]; }
+ subgraph cluster_plat { label="Платформенный слой (по одной реализации на ОС)"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  p1 [label="Безопасное хранилище ключей\nKeychain, Keystore, DPAPI/Hello, libsecret"]; p2 [label="Биометрия\nFace ID, Touch ID, Windows Hello, BiometricPrompt"]; p3 [label="Камера и микрофон"]; p4 [label="Уведомления"]; }
+ v -> vm -> a1; vm -> a4; vm -> a5;
+ a1 -> a3; a1 -> k3; a2 -> k2; a2 -> k3; a3 -> k2; a4 -> k2; a5 -> k2; a1 -> k1;
+ k1 -> p1; k3 -> p1; vm -> p2; a4 -> p3; a2 -> p4;
+}

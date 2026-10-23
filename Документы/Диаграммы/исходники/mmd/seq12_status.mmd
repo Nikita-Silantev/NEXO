@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    actor U as Пользователь
+    participant C as Клиент
+    participant API as Сервер NEXO
+    participant F as Фильтр текста
+    participant DB as PostgreSQL
+    participant R as Redis
+    participant O as Устройства друзей
+    U->>C: Выбирает «Работаю или учусь», текст, срок
+    C->>API: SetStatus(kind = BUSY, custom_text, expires_at)
+    API->>F: Проверка custom_text
+    F->>F: Нормализация и поиск по словарю moderation_terms
+    alt Текст отклонён
+        F-->>API: Нарушение
+        API-->>C: Ошибка STATUS_TEXT_REJECTED
+        C->>U: «Текст статуса не соответствует правилам»
+    else Текст допустим
+        API->>DB: UPSERT user_statuses
+        API->>R: Обновить присутствие
+        API-->>C: UserStatus
+        API--)O: SubscribeEvent(update: presence) только тем, кому статус виден
+    end
+    Note over API,DB: По истечении expires_at статус сбрасывается заданием обслуживания

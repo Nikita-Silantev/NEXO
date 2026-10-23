@@ -1,0 +1,101 @@
+classDiagram
+    direction TB
+    class GrpcEndpoints {
+        AuthService
+        DeviceService
+        UserService
+        ChatService
+        MessageService
+        SyncService
+        MediaService
+        PresenceService
+        KeyService
+        CallService
+        SettingsService
+        LegalService
+        ModerationService
+        AdminService
+    }
+    class IdentityModule {
+        +Register()
+        +Login()
+        +Refresh()
+        +Recover()
+    }
+    class DirectoryModule {
+        +Profiles()
+        +Contacts()
+        +Privacy()
+    }
+    class MessagingModule {
+        +Send()
+        +Edit()
+        +Delete()
+        +MarkRead()
+    }
+    class ChatsModule {
+        +Groups()
+        +Channels()
+        +Folders()
+        +Drafts()
+    }
+    class SyncModule {
+        +AppendUpdate()
+        +Stream()
+        +Difference()
+    }
+    class MediaModule {
+        +Upload()
+        +Download()
+        +Tiering()
+    }
+    class PresenceModule {
+        +Heartbeat()
+        +SetStatus()
+    }
+    class KeysModule {
+        +Bundles()
+        +SecretChats()
+    }
+    class CallsModule {
+        +Rooms()
+        +Tokens()
+    }
+    class ModerationModule {
+        +Reports()
+        +TermFilter()
+        +Sanctions()
+    }
+    class WorkerHost {
+        +Transcode
+        +Tiering
+        +PurgeExpired
+        +PushSender
+    }
+    class Infrastructure {
+        PostgreSQL
+        Redis
+        S3
+        LiveKit
+    }
+    GrpcEndpoints --> IdentityModule
+    GrpcEndpoints --> DirectoryModule
+    GrpcEndpoints --> MessagingModule
+    GrpcEndpoints --> ChatsModule
+    GrpcEndpoints --> SyncModule
+    GrpcEndpoints --> MediaModule
+    GrpcEndpoints --> PresenceModule
+    GrpcEndpoints --> KeysModule
+    GrpcEndpoints --> CallsModule
+    GrpcEndpoints --> ModerationModule
+    MessagingModule --> SyncModule
+    ChatsModule --> SyncModule
+    KeysModule --> SyncModule
+    CallsModule --> SyncModule
+    MessagingModule --> MediaModule
+    WorkerHost --> MediaModule
+    WorkerHost --> MessagingModule
+    IdentityModule --> Infrastructure
+    SyncModule --> Infrastructure
+    MediaModule --> Infrastructure
+    CallsModule --> Infrastructure

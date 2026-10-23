@@ -1,0 +1,166 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Синхронизация и доставка событий.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "messages.proto";
+import "chats.proto";
+import "users.proto";
+import "presence.proto";
+import "media.proto";
+import "calls.proto";
+import "devices.proto";
+import "settings.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+// ----- Долговечные обновления (получают update_seq и хранятся 30 суток) -----
+
+message NewMessageUpdate { Message message = 1; }
+message MessageEditedUpdate { Message message = 1; }
+message MessageDeletedUpdate {
+  string chat_id = 1;
+  repeated string message_ids = 2;
+  repeated int64 seqs = 3;
+  bool expired = 4;                           // удалено по таймеру автоудаления
+}
+message ReadStateUpdate {
+  string chat_id = 1;
+  string reader_id = 2;
+  int64 up_to_seq = 3;
+  bool is_self = 4;                           // прочитано на другом моём устройстве
+}
+message ChatUpdate {
+  Chat chat = 1;
+  bool removed = 2;                           // чат удалён или пользователь исключён
+}
+message MemberUpdate {
+  string chat_id = 1;
+  Member member = 2;
+  bool left = 3;
+}
+message FolderUpdate {
+  ChatFolder folder = 1;
+  string deleted_folder_id = 2;
+}
+message DraftUpdate {
+  Draft draft = 1;
+  bool cleared = 2;
+}
+message SettingsUpdate { SettingEntry entry = 1; bool deleted = 2; }
+message DeviceUpdate {
+  enum Event {
+    EVENT_UNSPECIFIED = 0;
+    EVENT_ADDED = 1;
+    EVENT_REVOKED = 2;
+    EVENT_RENAMED = 3;
+  }
+  Event event = 1;
+  DeviceSummary device = 2;
+}
+message FileReadyUpdate { FileInfo file = 1; }          // файл обработан или восстановлен из холодного хранилища
+message ContactUpdate { ContactLink link = 1; bool removed = 2; }
+message ReactionUpdate {
+  string chat_id = 1;
+  string message_id = 2;
+  repeated ReactionCount reactions = 3;
+}
+
+// ----- Эфемерные обновления (update_seq = 0, не хранятся) -----
+
+message TypingUpdate {
+  string chat_id = 1;
+  string user_id = 2;
+  SetTypingRequest.Action action = 3;
+}
+message PresenceUpdate { UserStatus status = 1; }
+message IncomingCallUpdate { Call call = 1; }
+message CallStateUpdate { Call call = 1; }
+message LoginApprovalUpdate { LoginApproval approval = 1; }
+message ChannelTickUpdate {                   // уведомление о новых постах канала без доставки содержимого
+  string chat_id = 1;
+  int64 top_seq = 2;
+}
+
+// Одно обновление. Для долговечных update_seq > 0 и строго возрастает в пределах пользователя.
+message Update {
+  int64 update_seq = 1;
+  google.protobuf.Timestamp created_at = 2;
+  oneof payload {
+    NewMessageUpdate new_message = 10;
+    MessageEditedUpdate message_edited = 11;
+    MessageDeletedUpdate message_deleted = 12;
+    ReadStateUpdate read_state = 13;
+    ChatUpdate chat = 14;
+    MemberUpdate member = 15;
+    FolderUpdate folder = 16;
+    DraftUpdate draft = 17;
+    SettingsUpdate settings = 18;
+    DeviceUpdate device = 19;
+    FileReadyUpdate file_ready = 20;
+    ContactUpdate contact = 21;
+    ReactionUpdate reaction = 22;
+    TypingUpdate typing = 40;
+    PresenceUpdate presence = 41;
+    IncomingCallUpdate incoming_call = 42;
+    CallStateUpdate call_state = 43;
+    LoginApprovalUpdate login_approval = 44;
+    ChannelTickUpdate channel_tick = 45;
+  }
+}
+
+message Heartbeat { google.protobuf.Timestamp server_time = 1; }
+
+message ResyncRequired {
+  string reason = 1;
+  int64 oldest_available_update_seq = 2;
+}
+
+// Элемент потока подписки.
+message SubscribeEvent {
+  oneof event {
+    Update update = 1;
+    Heartbeat heartbeat = 2;
+    ResyncRequired resync_required = 3;
+  }
+}
+
+service SyncService {
+  // Единый поток событий для устройства. Сначала отдаёт накопленные обновления после last_update_seq,
+  // затем переходит в режим реального времени. Обрыв потока не приводит к потере событий.
+  rpc Subscribe(SubscribeRequest) returns (stream SubscribeEvent);
+  // Текущая позиция журнала.
+  rpc GetState(google.protobuf.Empty) returns (GetStateResponse);
+  // Пакетное получение пропущенных обновлений (альтернатива потоку, например для фоновой синхронизации).
+  rpc GetDifference(GetDifferenceRequest) returns (GetDifferenceResponse);
+  // Подтверждение получения обновлений устройством (источник отметки «доставлено»).
+  rpc AckUpdates(AckUpdatesRequest) returns (google.protobuf.Empty);
+}
+
+message SubscribeRequest {
+  int64 last_update_seq = 1;                  // последний применённый клиентом update_seq
+  string client_version = 2;
+  repeated string watched_channel_ids = 3;    // каналы, для которых нужны ChannelTickUpdate
+}
+
+message GetStateResponse {
+  int64 current_update_seq = 1;
+  google.protobuf.Timestamp server_time = 2;
+  int64 oldest_available_update_seq = 3;
+}
+
+message GetDifferenceRequest {
+  int64 from_update_seq = 1;
+  int32 limit = 2;                            // 1..500
+}
+
+message GetDifferenceResponse {
+  repeated Update updates = 1;
+  int64 to_update_seq = 2;
+  bool has_more = 3;
+  bool resync_required = 4;                   // from_update_seq старше окна хранения: нужен ListChats
+}
+
+message AckUpdatesRequest { int64 up_to_update_seq = 1; }

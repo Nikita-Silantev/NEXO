@@ -1,0 +1,23 @@
+sequenceDiagram
+    autonumber
+    actor U as Пользователь
+    participant C as Клиент
+    participant OB as Очередь отправки
+    participant API as Сервер NEXO
+    U->>C: Пишет сообщение без сети
+    C->>OB: Сохранить (client_msg_id, содержимое), статус «Ожидает отправки»
+    Note over C,API: Связь отсутствует
+    C->>API: Subscribe(last_update_seq) — повторные попытки с экспоненциальной паузой
+    API--)C: Поток открыт
+    C->>OB: Забрать неотправленные по порядку создания
+    loop Для каждого сообщения
+        OB->>API: SendMessage(chat_id, client_msg_id, content)
+        alt Ответ получен
+            API-->>OB: Message(seq) или duplicate = true
+            OB->>C: Заменить временную запись серверной, «Отправлено»
+        else Обрыв до ответа
+            OB->>OB: Оставить в очереди, повторить с тем же client_msg_id
+        end
+    end
+    C->>API: GetDifference(from_update_seq)
+    API-->>C: Пропущенные обновления

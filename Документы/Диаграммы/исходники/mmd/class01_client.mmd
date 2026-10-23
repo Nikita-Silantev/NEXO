@@ -1,0 +1,75 @@
+classDiagram
+    direction LR
+    class ViewModel {
+        <<ReactiveUI>>
+        +Commands
+        +Observe()
+    }
+    class IChatService {
+        <<interface>>
+        +SendAsync(draft)
+        +LoadHistoryAsync(chatId, anchor)
+        +MarkReadAsync(chatId, seq)
+    }
+    class IOutbox {
+        <<interface>>
+        +Enqueue(message)
+        +Peek()
+        +Complete(clientMsgId)
+    }
+    class ISyncEngine {
+        <<interface>>
+        +StartAsync()
+        +LastUpdateSeq
+        +Updates
+    }
+    class ILocalStore {
+        <<interface>>
+        +Messages
+        +Chats
+        +Drafts
+        +Search(query)
+    }
+    class ISecureKeyStore {
+        <<interface>>
+        +GetDatabaseKey()
+        +SignWithDeviceKey(data)
+        +Unlock(biometricOrPin)
+    }
+    class ICryptoService {
+        <<interface>>
+        +DeriveAuthKey(password, params)
+        +EncryptSecret(session, plaintext)
+        +DecryptSecret(session, envelope)
+    }
+    class ITransport {
+        <<interface>>
+        +Call(rpc)
+        +Subscribe(lastSeq)
+    }
+    class IMediaService {
+        <<interface>>
+        +UploadAsync(file, progress)
+        +DownloadAsync(fileId)
+        +RecordVideoNoteAsync()
+    }
+    class IPlatformServices {
+        <<interface>>
+        +Biometrics
+        +Camera
+        +Notifications
+        +SecureStorage
+    }
+    ViewModel --> IChatService
+    ViewModel --> IMediaService
+    IChatService --> IOutbox
+    IChatService --> ILocalStore
+    IChatService --> ITransport
+    ISyncEngine --> ITransport
+    ISyncEngine --> ILocalStore
+    IMediaService --> ITransport
+    ILocalStore --> ISecureKeyStore
+    ICryptoService --> ISecureKeyStore
+    IChatService --> ICryptoService
+    ISecureKeyStore --> IPlatformServices
+    IMediaService --> IPlatformServices

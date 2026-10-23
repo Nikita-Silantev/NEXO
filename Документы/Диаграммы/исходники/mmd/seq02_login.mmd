@@ -1,0 +1,29 @@
+sequenceDiagram
+    autonumber
+    actor U as Пользователь
+    participant N as Новое устройство
+    participant API as Сервер NEXO
+    participant O as Действующее устройство
+    N->>API: GetKdfParams(username)
+    API-->>N: kdf_salt, params (для неизвестных ников — ложные значения)
+    N->>N: AuthKey = HKDF(Argon2id(пароль, kdf_salt))
+    N->>API: Login(username, auth_key, device, pow)
+    API->>API: Проверка верификатора, счётчика неудач, санкций
+    alt Включена двухфакторная защита
+        API-->>N: LoginResponse(second_factor)
+        U->>N: Код TOTP или резервный код
+        N->>API: CompleteSecondFactor(challenge_id, totp_code)
+    end
+    alt Есть другие активные устройства
+        API-->>N: LoginResponse(approval: approval_id, code)
+        API-)O: Update(login_approval) через Subscribe
+        N->>API: WatchLoginApproval(approval_id)
+        O->>U: Показ кода и данных нового устройства
+        U->>O: Подтверждение
+        O->>API: ResolveLoginApproval(approval_id, approve = true, signature)
+        API->>API: Проверка подписи ключом устройства, срока запроса
+        API--)N: LoginApprovalEvent(APPROVED, tokens)
+    else Других устройств нет
+        API-->>N: LoginResponse(tokens), уведомление о входе
+    end
+    N->>API: Subscribe(last_update_seq)

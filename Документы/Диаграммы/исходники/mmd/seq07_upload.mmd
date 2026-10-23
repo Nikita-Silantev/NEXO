@@ -1,0 +1,30 @@
+sequenceDiagram
+    autonumber
+    participant C as Клиент
+    participant API as Сервер NEXO
+    participant DB as PostgreSQL
+    participant S3 as Хранилище S3
+    participant W as Обработчик
+    C->>C: SHA-256 файла, разбиение на части
+    C->>API: InitUpload(kind, size, mime, sha256, is_encrypted)
+    API->>DB: Проверка размера и квоты, INSERT media_files, upload_sessions
+    API->>S3: Создать multipart-загрузку
+    API-->>C: file_id, upload_id, part_size, parts_total
+    C->>API: GetUploadPartUrls(upload_id, part_numbers)
+    API-->>C: Временные адреса частей
+    par Несколько частей параллельно
+        C->>S3: PUT часть n (по временному адресу)
+        S3-->>C: ETag
+    end
+    Note over C,S3: Обрыв связи
+    C->>API: GetUploadStatus(upload_id)
+    API-->>C: completed_parts
+    C->>S3: PUT недостающие части
+    C->>API: CompleteUpload(upload_id, parts, sha256)
+    API->>S3: Собрать объект, проверить размер
+    API->>DB: media_blobs, state = PROCESSING, учёт квоты
+    API-->>C: FileInfo(state = PROCESSING)
+    API-)W: Задание обработки (background_jobs)
+    W->>S3: Превью, оптимизированная копия, сжатие при пользе
+    W->>DB: state = READY
+    API--)C: SubscribeEvent(update: file_ready)

@@ -1,0 +1,20 @@
+sequenceDiagram
+    autonumber
+    participant A as Отправитель
+    participant API as Сервер NEXO
+    participant DB as PostgreSQL
+    participant B as Получатель
+    participant W as Фоновое задание
+    A->>API: SendMessage(chat_id, content, ttl_seconds = 3600)
+    API->>DB: INSERT messages (ttl_seconds = 3600, expires_at = NULL)
+    API--)B: SubscribeEvent(update: new_message)
+    B->>API: MarkRead(chat_id, up_to_seq)
+    API->>DB: first_read_at = now(), expires_at = now() + ttl
+    API--)A: SubscribeEvent(update: message_edited с expires_at)
+    B->>B: Локальный таймер удаления на устройстве
+    W->>DB: Выбрать сообщения с expires_at меньше now()
+    W->>DB: deleted_at = now(), тело и вложения очищены, задание очистки файлов
+    W->>DB: INSERT user_updates (MESSAGE_DELETED, expired = true)
+    API--)A: SubscribeEvent(update: message_deleted)
+    API--)B: SubscribeEvent(update: message_deleted)
+    Note over W,DB: Непрочитанные сообщения удаляются через 30 суток

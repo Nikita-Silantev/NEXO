@@ -1,0 +1,215 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Аутентификация.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+// Параметры функции выработки ключа на стороне клиента.
+message KdfParams {
+  string algorithm = 1;                       // всегда "argon2id"
+  uint32 memory_kib = 2;                      // например 65536 (64 МиБ)
+  uint32 iterations = 3;                      // например 3
+  uint32 parallelism = 4;                     // например 1
+  uint32 version = 5;                         // версия схемы выработки ключей
+}
+
+// Решение вычислительной задачи (защита от массовой регистрации).
+message PowSolution {
+  string challenge_id = 1;
+  bytes nonce = 2;
+}
+
+// Принятый юридический документ.
+message AcceptedDocument {
+  LegalDocKind kind = 1;
+  string version = 2;
+}
+
+service AuthService {
+  // Выдаёт вычислительную задачу для регистрации или входа. Доступно без токена.
+  rpc GetPowChallenge(GetPowChallengeRequest) returns (GetPowChallengeResponse);
+  // Проверяет, свободен ли ник. Доступно без токена, ограничено по частоте.
+  rpc CheckUsername(CheckUsernameRequest) returns (CheckUsernameResponse);
+  // Возвращает соль и параметры KDF для ника. Для несуществующих ников возвращает правдоподобные ложные значения.
+  rpc GetKdfParams(GetKdfParamsRequest) returns (GetKdfParamsResponse);
+  // Регистрирует учётную запись и первое устройство. Пароль на сервер не передаётся.
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  // Первый шаг входа по нику и AuthKey.
+  rpc Login(LoginRequest) returns (LoginResponse);
+  // Второй шаг входа: код TOTP или резервный код.
+  rpc CompleteSecondFactor(CompleteSecondFactorRequest) returns (LoginResponse);
+  // Ожидание решения по запросу подтверждения входа с другого устройства.
+  rpc WatchLoginApproval(WatchLoginApprovalRequest) returns (stream LoginApprovalEvent);
+  // Обновление пары токенов (ротация refresh-токена) с подписью ключом устройства.
+  rpc RefreshToken(RefreshTokenRequest) returns (TokenPair);
+  // Завершает текущую сессию.
+  rpc Logout(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Смена пароля. Опционально завершает остальные сессии.
+  rpc ChangePassword(ChangePasswordRequest) returns (TokenPair);
+  // Восстановление доступа по ключу восстановления.
+  rpc RecoverAccount(RecoverAccountRequest) returns (RecoverAccountResponse);
+  // Выпуск нового ключа восстановления (старый перестаёт действовать).
+  rpc RegenerateRecoveryKey(RegenerateRecoveryKeyRequest) returns (google.protobuf.Empty);
+  // Начало настройки TOTP: возвращает секрет и otpauth-ссылку.
+  rpc BeginTotpSetup(BeginTotpSetupRequest) returns (BeginTotpSetupResponse);
+  // Подтверждение настройки TOTP кодом. Возвращает резервные коды (показываются один раз).
+  rpc ConfirmTotpSetup(ConfirmTotpSetupRequest) returns (ConfirmTotpSetupResponse);
+  // Отключение TOTP.
+  rpc DisableTotp(DisableTotpRequest) returns (google.protobuf.Empty);
+}
+
+message GetPowChallengeRequest {
+  enum Purpose {
+    PURPOSE_UNSPECIFIED = 0;
+    PURPOSE_REGISTER = 1;
+    PURPOSE_LOGIN = 2;
+    PURPOSE_RECOVER = 3;
+  }
+  Purpose purpose = 1;
+}
+
+message GetPowChallengeResponse {
+  string challenge_id = 1;
+  bytes challenge = 2;                        // 16 случайных байт
+  uint32 difficulty_bits = 3;                 // число ведущих нулевых бит SHA-256(challenge || nonce)
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message CheckUsernameRequest { string username = 1; }
+message CheckUsernameResponse {
+  bool available = 1;
+  ErrorReason reason = 2;                     // USERNAME_TAKEN или USERNAME_INVALID, если недоступен
+}
+
+message GetKdfParamsRequest { string username = 1; }
+message GetKdfParamsResponse {
+  bytes kdf_salt = 1;
+  KdfParams params = 2;
+}
+
+message RegisterRequest {
+  string username = 1;
+  string display_name = 2;
+  bytes kdf_salt = 3;                         // 16 байт, выбирается клиентом
+  KdfParams kdf_params = 4;
+  bytes auth_key = 5;                         // 32 байта: HKDF(MasterKey, "nexo-auth")
+  bytes recovery_verifier_key = 6;            // 32 байта: HKDF(RecoveryKey, "nexo-recovery-verify")
+  PowSolution pow = 7;
+  DeviceInfo device = 8;
+  repeated AcceptedDocument accepted_documents = 9;  // соглашение, политика, согласие на обработку ПДн
+  string locale = 10;
+}
+
+message RegisterResponse {
+  string user_id = 1;
+  TokenPair tokens = 2;
+}
+
+message LoginRequest {
+  string username = 1;
+  bytes auth_key = 2;
+  DeviceInfo device = 3;
+  PowSolution pow = 4;                        // обязателен после неудачных попыток
+}
+
+message SecondFactorRequired {
+  string challenge_id = 1;
+  bool totp = 2;
+  bool backup_code = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message ApprovalRequired {
+  string approval_id = 1;
+  string code = 2;                            // короткий код для сверки на обоих устройствах
+  google.protobuf.Timestamp expires_at = 3;
+  bool fallback_password_only = 4;            // у пользователя нет других активных устройств
+}
+
+message LoginResponse {
+  oneof result {
+    TokenPair tokens = 1;
+    SecondFactorRequired second_factor = 2;
+    ApprovalRequired approval = 3;
+  }
+  repeated LegalDocKind documents_to_accept = 4;  // требуется принять новую редакцию документов
+}
+
+message CompleteSecondFactorRequest {
+  string challenge_id = 1;
+  oneof factor {
+    string totp_code = 2;
+    string backup_code = 3;
+  }
+}
+
+message WatchLoginApprovalRequest {
+  string approval_id = 1;
+  bytes device_pubkey = 2;                    // должен совпадать с ключом запроса
+}
+
+message LoginApprovalEvent {
+  ApprovalStatus status = 1;
+  TokenPair tokens = 2;                       // заполнено при APPROVED
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+  string device_id = 2;
+  google.protobuf.Timestamp timestamp = 3;    // не более 60 с от времени сервера
+  bytes signature = 4;                        // Ed25519(device_key, refresh_token || timestamp)
+}
+
+message ChangePasswordRequest {
+  bytes current_auth_key = 1;
+  bytes new_kdf_salt = 2;
+  KdfParams new_kdf_params = 3;
+  bytes new_auth_key = 4;
+  bool revoke_other_sessions = 5;
+}
+
+message RecoverAccountRequest {
+  string username = 1;
+  bytes recovery_verifier_key = 2;            // HKDF(RecoveryKey, "nexo-recovery-verify")
+  bytes new_kdf_salt = 3;
+  KdfParams new_kdf_params = 4;
+  bytes new_auth_key = 5;
+  bytes new_recovery_verifier_key = 6;        // сразу выпускается новый ключ восстановления
+  PowSolution pow = 7;
+  DeviceInfo device = 8;
+  oneof second_factor {
+    string totp_code = 9;
+    string backup_code = 10;
+  }
+}
+
+message RecoverAccountResponse {
+  oneof result {
+    TokenPair tokens = 1;
+    google.protobuf.Timestamp delayed_until = 2;   // 2FA включена, а кода нет: восстановление с задержкой
+  }
+}
+
+message RegenerateRecoveryKeyRequest {
+  bytes auth_key = 1;
+  bytes new_recovery_verifier_key = 2;
+}
+
+message BeginTotpSetupRequest { bytes auth_key = 1; }
+message BeginTotpSetupResponse {
+  string secret_base32 = 1;
+  string otpauth_uri = 2;
+}
+
+message ConfirmTotpSetupRequest { string code = 1; }
+message ConfirmTotpSetupResponse { repeated string backup_codes = 1; }
+
+message DisableTotpRequest {
+  bytes auth_key = 1;
+  string code = 2;
+}

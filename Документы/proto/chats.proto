@@ -1,0 +1,248 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Чаты, участники, папки, черновики.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+import "messages.proto";
+import "users.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+// Личное состояние пользователя в чате.
+message MemberState {
+  MemberRole role = 1;
+  int64 permissions = 2;                      // маска ChatPermission
+  google.protobuf.Timestamp muted_until = 3;
+  int32 pinned_position = 4;                  // 0 — не закреплён
+  bool archived = 5;
+  int64 last_read_seq = 6;
+  int64 last_delivered_seq = 7;
+  int64 unread_count = 8;
+}
+
+message SecretChatInfo {
+  string initiator_device_id = 1;
+  string peer_device_id = 2;
+  SecretState state = 3;
+}
+
+message Chat {
+  string chat_id = 1;
+  ChatKind kind = 2;
+  string title = 3;
+  string description = 4;
+  string avatar_file_id = 5;
+  string public_handle = 6;
+  string owner_id = 7;
+  int32 default_ttl_seconds = 8;
+  int32 slow_mode_seconds = 9;
+  int64 top_seq = 10;
+  int32 member_count = 11;
+  google.protobuf.Timestamp created_at = 12;
+  MemberState me = 13;
+  UserProfile direct_peer = 14;               // для DIRECT и SECRET
+  SecretChatInfo secret = 15;                 // для SECRET
+  Message last_message = 16;
+  Message pinned_message = 17;
+}
+
+message Member {
+  UserProfile user = 1;
+  MemberRole role = 2;
+  int64 permissions = 3;
+  google.protobuf.Timestamp joined_at = 4;
+}
+
+message ChatFolder {
+  string folder_id = 1;
+  string name = 2;
+  string icon = 3;
+  int32 position = 4;
+  int32 filter_flags = 5;                     // 1 непрочитанные, 2 личные, 4 группы, 8 каналы, 16 закреплённые
+  repeated string chat_ids = 6;
+}
+
+message Draft {
+  string chat_id = 1;
+  string body = 2;
+  string reply_to_id = 3;
+  int64 version = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message InviteLink {
+  string link_id = 1;
+  string url = 2;                             // https://nexo.example/join/<token>
+  google.protobuf.Timestamp expires_at = 3;
+  int32 max_uses = 4;
+  int32 uses = 5;
+  bool requires_approval = 6;
+}
+
+service ChatService {
+  // Список чатов пользователя (снимок), по убыванию активности.
+  rpc ListChats(ListChatsRequest) returns (ListChatsResponse);
+  // Один чат со всеми деталями.
+  rpc GetChat(GetChatRequest) returns (Chat);
+  // Находит или создаёт личный чат с пользователем.
+  rpc GetOrCreateDirectChat(GetOrCreateDirectChatRequest) returns (Chat);
+  // Создаёт группу.
+  rpc CreateGroup(CreateGroupRequest) returns (Chat);
+  // Создаёт канал.
+  rpc CreateChannel(CreateChannelRequest) returns (Chat);
+  // Изменяет название, описание, аватар, публичный ник, медленный режим.
+  rpc UpdateChat(UpdateChatRequest) returns (Chat);
+  // Устанавливает срок автоудаления сообщений по умолчанию.
+  rpc SetChatTtl(SetChatTtlRequest) returns (Chat);
+  // Участники чата страницами.
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  // Добавляет участников (с учётом их настроек приватности).
+  rpc AddMembers(AddMembersRequest) returns (google.protobuf.Empty);
+  // Исключает участника.
+  rpc RemoveMember(RemoveMemberRequest) returns (google.protobuf.Empty);
+  // Выход из чата.
+  rpc LeaveChat(ChatRef) returns (google.protobuf.Empty);
+  // Роль и права участника.
+  rpc SetMemberRole(SetMemberRoleRequest) returns (google.protobuf.Empty);
+  // Создаёт пригласительную ссылку.
+  rpc CreateInviteLink(CreateInviteLinkRequest) returns (InviteLink);
+  // Отзывает ссылку.
+  rpc RevokeInviteLink(RevokeInviteLinkRequest) returns (google.protobuf.Empty);
+  // Предпросмотр чата по токену ссылки без вступления.
+  rpc ResolveInvite(ResolveInviteRequest) returns (ResolveInviteResponse);
+  // Вступление по ссылке.
+  rpc JoinByInvite(ResolveInviteRequest) returns (Chat);
+  // Уведомления: отключить до момента времени.
+  rpc MuteChat(MuteChatRequest) returns (google.protobuf.Empty);
+  // Закрепить чат в списке.
+  rpc PinChat(PinChatRequest) returns (google.protobuf.Empty);
+  // Архивировать чат.
+  rpc ArchiveChat(ArchiveChatRequest) returns (google.protobuf.Empty);
+  // Папки пользователя.
+  rpc ListFolders(google.protobuf.Empty) returns (ListFoldersResponse);
+  // Создаёт или обновляет папку.
+  rpc UpsertFolder(ChatFolder) returns (ChatFolder);
+  // Удаляет папку (чаты остаются).
+  rpc DeleteFolder(DeleteFolderRequest) returns (google.protobuf.Empty);
+  // Порядок папок.
+  rpc ReorderFolders(ReorderFoldersRequest) returns (google.protobuf.Empty);
+  // Сохраняет черновик (последний по версии выигрывает).
+  rpc SaveDraft(Draft) returns (Draft);
+  // Все черновики пользователя.
+  rpc ListDrafts(google.protobuf.Empty) returns (ListDraftsResponse);
+}
+
+message ChatRef { string chat_id = 1; }
+
+message ListChatsRequest {
+  PageRequest page = 1;
+  bool include_archived = 2;
+}
+
+message ListChatsResponse {
+  repeated Chat chats = 1;
+  PageInfo page = 2;
+  int64 snapshot_update_seq = 3;              // с этого update_seq клиент продолжает подписку
+}
+
+message GetChatRequest { string chat_id = 1; }
+message GetOrCreateDirectChatRequest { string user_id = 1; }
+
+message CreateGroupRequest {
+  string title = 1;
+  string description = 2;
+  repeated string member_ids = 3;
+  int32 default_ttl_seconds = 4;
+}
+
+message CreateChannelRequest {
+  string title = 1;
+  string description = 2;
+  string public_handle = 3;
+}
+
+message UpdateChatRequest {
+  string chat_id = 1;
+  string title = 2;
+  string description = 3;
+  string avatar_file_id = 4;
+  string public_handle = 5;
+  int32 slow_mode_seconds = 6;
+}
+
+message SetChatTtlRequest {
+  string chat_id = 1;
+  int32 ttl_seconds = 2;                      // 0 — выключить
+}
+
+message ListMembersRequest {
+  string chat_id = 1;
+  PageRequest page = 2;
+}
+
+message ListMembersResponse {
+  repeated Member members = 1;
+  PageInfo page = 2;
+}
+
+message AddMembersRequest {
+  string chat_id = 1;
+  repeated string user_ids = 2;
+}
+
+message RemoveMemberRequest {
+  string chat_id = 1;
+  string user_id = 2;
+}
+
+message SetMemberRoleRequest {
+  string chat_id = 1;
+  string user_id = 2;
+  MemberRole role = 3;
+  int64 permissions = 4;
+}
+
+message CreateInviteLinkRequest {
+  string chat_id = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  int32 max_uses = 3;
+  bool requires_approval = 4;
+}
+
+message RevokeInviteLinkRequest {
+  string chat_id = 1;
+  string link_id = 2;
+}
+
+message ResolveInviteRequest { string token = 1; }
+
+message ResolveInviteResponse {
+  string title = 1;
+  string description = 2;
+  ChatKind kind = 3;
+  int32 member_count = 4;
+  bool requires_approval = 5;
+}
+
+message MuteChatRequest {
+  string chat_id = 1;
+  google.protobuf.Timestamp muted_until = 2;
+}
+
+message PinChatRequest {
+  string chat_id = 1;
+  bool pinned = 2;
+}
+
+message ArchiveChatRequest {
+  string chat_id = 1;
+  bool archived = 2;
+}
+
+message ListFoldersResponse { repeated ChatFolder folders = 1; }
+message DeleteFolderRequest { string folder_id = 1; }
+message ReorderFoldersRequest { repeated string folder_ids = 1; }
+message ListDraftsResponse { repeated Draft drafts = 1; }

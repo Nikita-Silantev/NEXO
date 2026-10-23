@@ -1,0 +1,9 @@
+flowchart TD
+    A([Начало: задание каждую минуту]) --> B[Выбрать messages: expires_at меньше now, deleted_at пусто, пакет 500]
+    B --> C{Пакет не пуст?}
+    C -- Нет --> Z([Конец])
+    C -- Да --> D[Для каждого сообщения: очистить body, entities, ciphertext, deleted_at = now]
+    D --> E[Создать задание освобождения файлов]
+    E --> F[Добавить MESSAGE_DELETED в user_updates участников]
+    F --> G[Сигнал в Redis]
+    G --> B

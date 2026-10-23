@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    participant A as Клиент отправителя
+    participant API as Сервер NEXO
+    participant DB as PostgreSQL
+    participant R as Redis
+    participant B as Клиент получателя
+    A->>A: Сообщение в локальной БД, статус «Отправляется», client_msg_id
+    A->>API: SendMessage(chat_id, client_msg_id, content)
+    API->>API: Проверки: права, блокировки, приватность, длина, медленный режим
+    API->>DB: Транзакция: seq = top_seq + 1, INSERT messages (идемпотентно)
+    API->>DB: INSERT user_updates для каждого участника (NEW_MESSAGE)
+    API->>DB: COMMIT
+    API-->>A: SendMessageResponse(message с seq, duplicate = false)
+    A->>A: Статус «Отправлено»
+    API-)R: PUBLISH сигнал user:{id}
+    R-)API: Сигнал на узле, держащем Subscribe получателя
+    API--)B: SubscribeEvent(update: new_message)
+    B->>B: Применить обновление, сохранить в локальную БД
+    B->>API: AckUpdates(up_to_update_seq)
+    API->>DB: last_delivered_seq, обновление READ_STATE для отправителя
+    API--)A: SubscribeEvent(update: read_state, «Доставлено»)

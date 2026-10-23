@@ -1,0 +1,17 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Offline
+    Offline --> Online: Subscribe и Heartbeat
+    Online --> Idle: Бездействие 5 минут
+    Idle --> Online: Действие пользователя
+    Online --> Offline: Нет Heartbeat 90 секунд
+    Idle --> Offline: Нет Heartbeat 90 секунд
+    state Online {
+        [*] --> Auto
+        Auto --> DND: SetStatus(DND)
+        Auto --> Away: SetStatus(AWAY)
+        Auto --> Busy: SetStatus(BUSY)
+        DND --> Auto: Сброс или истёк срок
+        Away --> Auto: Сброс или истёк срок
+        Busy --> Auto: Сброс или истёк срок
+    }

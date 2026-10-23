@@ -1,0 +1,49 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Присутствие и статусы.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+// Статус пользователя, видимый другим.
+message UserStatus {
+  string user_id = 1;
+  bool online = 2;                            // вычисляется по присутствию хотя бы одного устройства
+  StatusKind kind = 3;
+  string custom_text = 4;                     // ≤ 70 символов, проходит фильтр
+  string custom_emoji = 5;
+  google.protobuf.Timestamp expires_at = 6;   // автоматический сброс
+  google.protobuf.Timestamp last_seen_at = 7;
+}
+
+enum ActivityState {
+  ACTIVITY_STATE_UNSPECIFIED = 0;
+  ACTIVITY_STATE_ACTIVE = 1;                  // пользователь работает с приложением
+  ACTIVITY_STATE_IDLE = 2;                    // бездействие более 5 минут
+  ACTIVITY_STATE_BACKGROUND = 3;              // приложение свёрнуто
+}
+
+service PresenceService {
+  // Устанавливает ручной статус. Текст проверяется фильтром; при отказе — STATUS_TEXT_REJECTED.
+  rpc SetStatus(SetStatusRequest) returns (UserStatus);
+  // Статусы набора пользователей с учётом настроек приватности.
+  rpc GetStatuses(GetStatusesRequest) returns (GetStatusesResponse);
+  // Сигнал присутствия устройства; отправляется каждые 30 секунд при активной подписке.
+  rpc Heartbeat(HeartbeatRequest) returns (google.protobuf.Empty);
+}
+
+message SetStatusRequest {
+  StatusKind kind = 1;
+  string custom_text = 2;
+  string custom_emoji = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  bool invisible = 5;
+}
+
+message GetStatusesRequest { repeated string user_ids = 1; }
+message GetStatusesResponse { repeated UserStatus statuses = 1; }
+message HeartbeatRequest { ActivityState activity = 1; }

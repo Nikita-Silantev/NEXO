@@ -1,0 +1,11 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Active: Login или Register
+    Active --> Rotated: RefreshToken
+    Rotated --> Active: Выдан новый токен семейства
+    Rotated --> FamilyRevoked: Повторное использование старого токена
+    Active --> Revoked: Logout, отзыв устройства, смена пароля
+    Active --> Expired: Истёк срок refresh-токена
+    FamilyRevoked --> [*]
+    Revoked --> [*]
+    Expired --> [*]

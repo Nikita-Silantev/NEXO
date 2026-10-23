@@ -1,0 +1,34 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Юридические документы и согласия.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+import "auth.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+message LegalDocument {
+  LegalDocKind kind = 1;
+  string version = 2;
+  string title = 3;
+  string url = 4;                             // адрес текста на сайте
+  string sha256 = 5;                          // хеш опубликованного текста (hex)
+  google.protobuf.Timestamp published_at = 6;
+  bool mandatory = 7;
+}
+
+service LegalService {
+  // Действующие редакции документов. Доступно без токена.
+  rpc GetLegalDocuments(google.protobuf.Empty) returns (GetLegalDocumentsResponse);
+  // Фиксирует принятие документов текущим пользователем (дата, IP, устройство).
+  rpc AcceptDocuments(AcceptDocumentsRequest) returns (google.protobuf.Empty);
+  // Документы, которые пользователю ещё нужно принять.
+  rpc GetConsentStatus(google.protobuf.Empty) returns (GetConsentStatusResponse);
+}
+
+message GetLegalDocumentsResponse { repeated LegalDocument documents = 1; }
+message AcceptDocumentsRequest { repeated AcceptedDocument documents = 1; }
+message GetConsentStatusResponse { repeated LegalDocument pending = 1; }

@@ -1,0 +1,19 @@
+digraph G { rankdir=LR; splines=true; nodesep=0.4; ranksep=1.0; pad=0.3; bgcolor=white; compound=true;
+ node [shape=box, style="filled", fillcolor=white, fontname="Times New Roman", fontsize=14];
+ edge [fontname="Times New Roman", fontsize=11];
+ subgraph cluster_dev { label="Устройства пользователей"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  d1 [label="Клиенты\nWindows, macOS, Linux"]; d2 [label="Браузер (WASM)"]; d3 [label="Android"]; d4 [label="iOS"]; }
+ subgraph cluster_vps { label="Арендованный VPS (Ubuntu LTS), Docker Compose"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  node [style="filled,rounded"];
+  caddy [label="caddy\n:443 HTTPS, HTTP/3"]; api [label="nexo-api\nASP.NET Core"]; worker [label="nexo-worker"]; site [label="nexo-site\nсайт и установщики"];
+  pg [label="postgres:16\nтом data", shape=cylinder, style=filled]; rd [label="redis:7", shape=cylinder, style=filled]; minio [label="minio\nгорячее хранилище", shape=cylinder, style=filled];
+  lk [label="livekit\nSFU + TURN :7881, UDP 50000-60000"]; mon [label="prometheus, grafana, loki"]; bkp [label="backup\nWAL-G, шифрование age"]; }
+ subgraph cluster_ext { label="Внешние сервисы"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  cold [label="Холодное хранилище\nS3-совместимое", shape=cylinder, style=filled]; off [label="Резервные копии\nвне сервера", shape=cylinder, style=filled];
+  push [label="FCM, RuStore Push,\nAPNs, WebPush"]; rustore [label="RuStore, Google Play"]; }
+ d1 -> caddy [label="HTTPS gRPC"]; d2 -> caddy; d3 -> caddy; d4 -> caddy;
+ d1 -> lk [label="WebRTC UDP", style=dotted]; d1 -> minio [label="HTTPS (временные адреса)", style=dotted];
+ caddy -> api; caddy -> site; caddy -> minio; caddy -> lk;
+ api -> pg; api -> rd; api -> minio; api -> lk; worker -> pg; worker -> minio; worker -> cold; worker -> push;
+ api -> mon; worker -> mon; pg -> bkp; bkp -> off; d3 -> rustore [style=dashed, label="установка"];
+}

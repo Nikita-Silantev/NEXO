@@ -1,0 +1,42 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Жалобы пользователей.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+message Report {
+  string report_id = 1;
+  ReportTarget target_kind = 2;
+  string target_id = 3;
+  ReportReason reason = 4;
+  string details = 5;
+  ReportStatus status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp resolved_at = 8;
+  string resolution_note = 9;
+}
+
+service ModerationService {
+  // Подаёт жалобу. Для сообщений секретного чата автор прикладывает расшифрованный фрагмент.
+  rpc CreateReport(CreateReportRequest) returns (Report);
+  // Свои жалобы и их статус.
+  rpc ListMyReports(ListMyReportsRequest) returns (ListMyReportsResponse);
+}
+
+message CreateReportRequest {
+  ReportTarget target_kind = 1;
+  string target_id = 2;
+  ReportReason reason = 3;
+  string details = 4;                         // до 1000 символов
+  string evidence_json = 5;                   // для E2EE: расшифрованный фрагмент и контекст
+}
+
+message ListMyReportsRequest { PageRequest page = 1; }
+message ListMyReportsResponse {
+  repeated Report reports = 1;
+  PageInfo page = 2;
+}

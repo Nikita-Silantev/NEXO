@@ -1,0 +1,357 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Общие типы.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+// ---------------------------------------------------------------------------
+// Соглашения (обязательны для всех файлов протокола):
+//  1. Идентификаторы (UUID) передаются строкой в каноническом виде (RFC 9562, UUIDv7).
+//  2. Время передаётся google.protobuf.Timestamp в UTC.
+//  3. Поле «update_seq» в Update — порядковый номер в журнале обновлений
+//     пользователя; 0 означает эфемерное (недолговечное) обновление.
+//  4. Номера полей не переиспользуются; удалённые поля помечаются reserved.
+// ---------------------------------------------------------------------------
+
+// Код причины ошибки. Передаётся в ErrorDetail.reason.
+enum ErrorReason {
+  ERROR_REASON_UNSPECIFIED = 0;
+  ERROR_REASON_INVALID_CREDENTIALS = 1;       // неверный логин или пароль
+  ERROR_REASON_ACCOUNT_LOCKED = 2;            // вход временно заблокирован
+  ERROR_REASON_ACCOUNT_SUSPENDED = 3;         // учётная запись приостановлена
+  ERROR_REASON_SECOND_FACTOR_REQUIRED = 4;    // требуется второй фактор
+  ERROR_REASON_SECOND_FACTOR_INVALID = 5;     // неверный код второго фактора
+  ERROR_REASON_TOKEN_EXPIRED = 6;             // срок действия access-токена истёк
+  ERROR_REASON_TOKEN_REVOKED = 7;             // сессия отозвана
+  ERROR_REASON_REFRESH_REUSE_DETECTED = 8;    // повторное использование refresh-токена
+  ERROR_REASON_USERNAME_TAKEN = 9;            // ник занят
+  ERROR_REASON_USERNAME_INVALID = 10;         // ник не соответствует правилам
+  ERROR_REASON_PASSWORD_WEAK = 11;            // пароль не соответствует политике
+  ERROR_REASON_POW_REQUIRED = 12;             // нужно решить вычислительную задачу
+  ERROR_REASON_POW_INVALID = 13;              // решение задачи неверно или устарело
+  ERROR_REASON_RATE_LIMITED = 14;             // превышен лимит запросов
+  ERROR_REASON_DOCUMENTS_NOT_ACCEPTED = 15;   // не приняты обязательные юридические документы
+  ERROR_REASON_NOT_FOUND = 16;                // объект не найден или недоступен
+  ERROR_REASON_PERMISSION_DENIED = 17;        // недостаточно прав
+  ERROR_REASON_BLOCKED_BY_PEER = 18;          // собеседник ограничил отправку
+  ERROR_REASON_PRIVACY_RESTRICTED = 19;       // действие запрещено настройками приватности
+  ERROR_REASON_CHAT_FULL = 20;                // достигнут лимит участников
+  ERROR_REASON_MESSAGE_TOO_LONG = 21;         // сообщение длиннее допустимого
+  ERROR_REASON_EDIT_WINDOW_EXPIRED = 22;      // срок редактирования истёк
+  ERROR_REASON_SLOW_MODE = 23;                // действует медленный режим
+  ERROR_REASON_STATUS_TEXT_REJECTED = 24;     // текст статуса не прошёл фильтр
+  ERROR_REASON_FILE_TOO_LARGE = 25;           // файл превышает максимальный размер
+  ERROR_REASON_QUOTA_EXCEEDED = 26;           // исчерпана квота хранилища
+  ERROR_REASON_UPLOAD_EXPIRED = 27;           // сессия загрузки истекла
+  ERROR_REASON_CHECKSUM_MISMATCH = 28;        // контрольная сумма не совпала
+  ERROR_REASON_FILE_RESTORING = 29;           // файл восстанавливается из холодного хранилища
+  ERROR_REASON_PREKEYS_EXHAUSTED = 30;        // одноразовые предключи устройства закончились
+  ERROR_REASON_DEVICE_NOT_FOUND = 31;         // устройство не найдено или отозвано
+  ERROR_REASON_CALL_BUSY = 32;                // абонент занят
+  ERROR_REASON_CALL_ENDED = 33;               // звонок уже завершён
+  ERROR_REASON_VERSION_CONFLICT = 34;         // конфликт версий (оптимистическая блокировка)
+  ERROR_REASON_CLIENT_TOO_OLD = 35;           // версия клиента больше не поддерживается
+  ERROR_REASON_RESYNC_REQUIRED = 36;          // нужна полная повторная синхронизация
+}
+
+// Деталь ошибки: передаётся в бинарном трейлере grpc-status-details-bin.
+message ErrorDetail {
+  ErrorReason reason = 1;
+  map<string, string> metadata = 2;           // параметры для локализации (лимиты, сроки)
+  int32 retry_after_seconds = 3;              // через сколько секунд повторить (0 — не задано)
+}
+
+enum ChatKind {
+  CHAT_KIND_UNSPECIFIED = 0;
+  CHAT_KIND_DIRECT = 1;
+  CHAT_KIND_GROUP = 2;
+  CHAT_KIND_CHANNEL = 3;
+  CHAT_KIND_SECRET = 4;
+}
+
+enum MemberRole {
+  MEMBER_ROLE_UNSPECIFIED = 0;
+  MEMBER_ROLE_OWNER = 1;
+  MEMBER_ROLE_ADMIN = 2;
+  MEMBER_ROLE_MEMBER = 3;
+  MEMBER_ROLE_SUBSCRIBER = 4;
+}
+
+// Права в чате (битовая маска, поле permissions).
+enum ChatPermission {
+  CHAT_PERMISSION_NONE = 0;
+  CHAT_PERMISSION_SEND_MESSAGES = 1;
+  CHAT_PERMISSION_SEND_MEDIA = 2;
+  CHAT_PERMISSION_ADD_MEMBERS = 4;
+  CHAT_PERMISSION_REMOVE_MEMBERS = 8;
+  CHAT_PERMISSION_PIN_MESSAGES = 16;
+  CHAT_PERMISSION_DELETE_MESSAGES = 32;
+  CHAT_PERMISSION_EDIT_CHAT = 64;
+  CHAT_PERMISSION_MANAGE_INVITES = 128;
+  CHAT_PERMISSION_MANAGE_CALLS = 256;
+}
+
+enum DevicePlatform {
+  DEVICE_PLATFORM_UNSPECIFIED = 0;
+  DEVICE_PLATFORM_WINDOWS = 1;
+  DEVICE_PLATFORM_MACOS = 2;
+  DEVICE_PLATFORM_LINUX = 3;
+  DEVICE_PLATFORM_ANDROID = 4;
+  DEVICE_PLATFORM_IOS = 5;
+  DEVICE_PLATFORM_WEB = 6;
+}
+
+enum PushProvider {
+  PUSH_PROVIDER_NONE = 0;
+  PUSH_PROVIDER_FCM = 1;
+  PUSH_PROVIDER_RUSTORE = 2;
+  PUSH_PROVIDER_APNS = 3;
+  PUSH_PROVIDER_WEBPUSH = 4;
+}
+
+enum Visibility {
+  VISIBILITY_UNSPECIFIED = 0;
+  VISIBILITY_EVERYONE = 1;
+  VISIBILITY_CONTACTS = 2;
+  VISIBILITY_NOBODY = 3;
+}
+
+enum Audience {
+  AUDIENCE_UNSPECIFIED = 0;
+  AUDIENCE_EVERYONE = 1;
+  AUDIENCE_CONTACTS = 2;
+}
+
+enum UserRole {
+  USER_ROLE_UNSPECIFIED = 0;
+  USER_ROLE_USER = 1;
+  USER_ROLE_MODERATOR = 2;
+  USER_ROLE_ADMIN = 3;
+}
+
+enum AccountState {
+  ACCOUNT_STATE_UNSPECIFIED = 0;
+  ACCOUNT_STATE_ACTIVE = 1;
+  ACCOUNT_STATE_SUSPENDED = 2;
+  ACCOUNT_STATE_DELETED = 3;
+}
+
+enum ContactStatus {
+  CONTACT_STATUS_UNSPECIFIED = 0;
+  CONTACT_STATUS_PENDING = 1;
+  CONTACT_STATUS_ACCEPTED = 2;
+  CONTACT_STATUS_DECLINED = 3;
+}
+
+enum StatusKind {
+  STATUS_KIND_UNSPECIFIED = 0;
+  STATUS_KIND_AUTO = 1;
+  STATUS_KIND_DND = 2;
+  STATUS_KIND_AWAY = 3;
+  STATUS_KIND_BUSY = 4;
+}
+
+enum MediaKind {
+  MEDIA_KIND_UNSPECIFIED = 0;
+  MEDIA_KIND_IMAGE = 1;
+  MEDIA_KIND_VIDEO = 2;
+  MEDIA_KIND_AUDIO = 3;
+  MEDIA_KIND_VOICE = 4;
+  MEDIA_KIND_VIDEO_NOTE = 5;
+  MEDIA_KIND_FILE = 6;
+  MEDIA_KIND_THEME = 7;
+  MEDIA_KIND_AVATAR = 8;
+}
+
+enum FileState {
+  FILE_STATE_UNSPECIFIED = 0;
+  FILE_STATE_UPLOADING = 1;
+  FILE_STATE_PROCESSING = 2;
+  FILE_STATE_READY = 3;
+  FILE_STATE_FAILED = 4;
+  FILE_STATE_DELETED = 5;
+}
+
+enum StorageTier {
+  STORAGE_TIER_UNSPECIFIED = 0;
+  STORAGE_TIER_HOT = 1;
+  STORAGE_TIER_COLD = 2;
+  STORAGE_TIER_RESTORING = 3;
+}
+
+enum VariantKind {
+  VARIANT_KIND_UNSPECIFIED = 0;
+  VARIANT_KIND_THUMBNAIL = 1;
+  VARIANT_KIND_PREVIEW = 2;
+  VARIANT_KIND_OPTIMIZED = 3;
+  VARIANT_KIND_WAVEFORM = 4;
+  VARIANT_KIND_ORIGINAL = 5;                  // исходный файл (не хранится в БД как вариант)
+}
+
+enum UploadState {
+  UPLOAD_STATE_UNSPECIFIED = 0;
+  UPLOAD_STATE_OPEN = 1;
+  UPLOAD_STATE_COMPLETING = 2;
+  UPLOAD_STATE_COMPLETED = 3;
+  UPLOAD_STATE_ABORTED = 4;
+  UPLOAD_STATE_EXPIRED = 5;
+}
+
+enum CallKind {
+  CALL_KIND_UNSPECIFIED = 0;
+  CALL_KIND_AUDIO = 1;
+  CALL_KIND_VIDEO = 2;
+}
+
+enum CallState {
+  CALL_STATE_UNSPECIFIED = 0;
+  CALL_STATE_RINGING = 1;
+  CALL_STATE_ACTIVE = 2;
+  CALL_STATE_ENDED = 3;
+  CALL_STATE_MISSED = 4;
+  CALL_STATE_DECLINED = 5;
+  CALL_STATE_FAILED = 6;
+}
+
+enum SecretState {
+  SECRET_STATE_UNSPECIFIED = 0;
+  SECRET_STATE_PENDING = 1;
+  SECRET_STATE_ACTIVE = 2;
+  SECRET_STATE_CLOSED = 3;
+}
+
+enum ApprovalStatus {
+  APPROVAL_STATUS_UNSPECIFIED = 0;
+  APPROVAL_STATUS_PENDING = 1;
+  APPROVAL_STATUS_APPROVED = 2;
+  APPROVAL_STATUS_DENIED = 3;
+  APPROVAL_STATUS_EXPIRED = 4;
+}
+
+enum AuthEventKind {
+  AUTH_EVENT_KIND_UNSPECIFIED = 0;
+  AUTH_EVENT_KIND_LOGIN_OK = 1;
+  AUTH_EVENT_KIND_LOGIN_FAILED = 2;
+  AUTH_EVENT_KIND_LOGIN_APPROVAL_REQUESTED = 3;
+  AUTH_EVENT_KIND_LOGIN_APPROVED = 4;
+  AUTH_EVENT_KIND_LOGIN_DENIED = 5;
+  AUTH_EVENT_KIND_DEVICE_REVOKED = 6;
+  AUTH_EVENT_KIND_LOGOUT = 7;
+  AUTH_EVENT_KIND_PASSWORD_CHANGED = 8;
+  AUTH_EVENT_KIND_RECOVERY_KEY_USED = 9;
+  AUTH_EVENT_KIND_RECOVERY_KEY_REGENERATED = 10;
+  AUTH_EVENT_KIND_TOTP_ENABLED = 11;
+  AUTH_EVENT_KIND_TOTP_DISABLED = 12;
+  AUTH_EVENT_KIND_ACCOUNT_LOCKED = 13;
+}
+
+enum ReportTarget {
+  REPORT_TARGET_UNSPECIFIED = 0;
+  REPORT_TARGET_USER = 1;
+  REPORT_TARGET_CHAT = 2;
+  REPORT_TARGET_MESSAGE = 3;
+  REPORT_TARGET_FILE = 4;
+}
+
+enum ReportReason {
+  REPORT_REASON_UNSPECIFIED = 0;
+  REPORT_REASON_SPAM = 1;
+  REPORT_REASON_ILLEGAL = 2;
+  REPORT_REASON_ABUSE = 3;
+  REPORT_REASON_VIOLENCE = 4;
+  REPORT_REASON_FRAUD = 5;
+  REPORT_REASON_OTHER = 6;
+}
+
+enum ReportStatus {
+  REPORT_STATUS_UNSPECIFIED = 0;
+  REPORT_STATUS_OPEN = 1;
+  REPORT_STATUS_IN_REVIEW = 2;
+  REPORT_STATUS_ACTIONED = 3;
+  REPORT_STATUS_REJECTED = 4;
+}
+
+enum SanctionKind {
+  SANCTION_KIND_UNSPECIFIED = 0;
+  SANCTION_KIND_WARNING = 1;
+  SANCTION_KIND_MUTE = 2;
+  SANCTION_KIND_SUSPEND = 3;
+  SANCTION_KIND_BAN = 4;
+}
+
+enum TermCategory {
+  TERM_CATEGORY_UNSPECIFIED = 0;
+  TERM_CATEGORY_PROFANITY = 1;
+  TERM_CATEGORY_EXTREMISM = 2;
+  TERM_CATEGORY_CUSTOM = 3;
+}
+
+enum LegalStatus {
+  LEGAL_STATUS_UNSPECIFIED = 0;
+  LEGAL_STATUS_RECEIVED = 1;
+  LEGAL_STATUS_IN_PROGRESS = 2;
+  LEGAL_STATUS_COMPLETED = 3;
+  LEGAL_STATUS_REJECTED = 4;
+}
+
+enum LegalDocKind {
+  LEGAL_DOC_KIND_UNSPECIFIED = 0;
+  LEGAL_DOC_KIND_TERMS = 1;
+  LEGAL_DOC_KIND_PRIVACY = 2;
+  LEGAL_DOC_KIND_PD_CONSENT = 3;
+  LEGAL_DOC_KIND_COMMUNITY_RULES = 4;
+}
+
+// Постраничный запрос с непрозрачным курсором.
+message PageRequest {
+  int32 limit = 1;                            // 1..100, по умолчанию 50
+  string cursor = 2;                          // значение next_cursor предыдущего ответа
+}
+
+message PageInfo {
+  string next_cursor = 1;                     // пусто, если страниц больше нет
+  bool has_more = 2;
+}
+
+// Фрагмент форматирования текста сообщения.
+message TextEntity {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_BOLD = 1;
+    KIND_ITALIC = 2;
+    KIND_UNDERLINE = 3;
+    KIND_STRIKE = 4;
+    KIND_CODE = 5;
+    KIND_PRE = 6;
+    KIND_LINK = 7;
+    KIND_MENTION = 8;                         // упоминание пользователя (user_id)
+    KIND_SPOILER = 9;
+  }
+  Kind kind = 1;
+  int32 offset = 2;                           // смещение в UTF-16 кодовых единицах
+  int32 length = 3;
+  string url = 4;                             // для KIND_LINK
+  string user_id = 5;                         // для KIND_MENTION
+}
+
+// Информация о клиентском устройстве, передаваемая при входе и регистрации.
+message DeviceInfo {
+  string name = 1;                            // например «MacBook Никиты»
+  DevicePlatform platform = 2;
+  string app_version = 3;
+  string os_version = 4;
+  bytes device_pubkey = 5;                    // Ed25519, 32 байта
+}
+
+// Пара токенов доступа.
+message TokenPair {
+  string access_token = 1;                    // JWT (EdDSA), срок жизни 10 минут
+  google.protobuf.Timestamp access_expires_at = 2;
+  string refresh_token = 3;                   // непрозрачный, 256 бит, одноразовый
+  google.protobuf.Timestamp refresh_expires_at = 4;
+  string device_id = 5;
+  string session_id = 6;
+}

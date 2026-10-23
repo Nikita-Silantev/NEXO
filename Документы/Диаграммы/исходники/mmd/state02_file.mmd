@@ -1,0 +1,18 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Uploading: InitUpload
+    Uploading --> Uploading: Приём частей
+    Uploading --> Aborted: AbortUpload или истёк срок
+    Uploading --> Processing: CompleteUpload
+    Processing --> Ready: Превью и сжатие завершены
+    Processing --> Failed: Ошибка обработки
+    Ready --> Deleted: DeleteFile или удаление сообщения
+    Failed --> Deleted
+    Aborted --> [*]
+    Deleted --> [*]
+    state Ready {
+        [*] --> Hot
+        Hot --> Cold: Нет обращений 30 суток
+        Cold --> Restoring: RequestRestore
+        Restoring --> Hot: Восстановление завершено
+    }

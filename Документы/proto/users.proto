@@ -1,0 +1,152 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Пользователи, контакты, приватность.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+import "presence.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+// Публичный профиль пользователя с учётом настроек приватности запрашивающего.
+message UserProfile {
+  string user_id = 1;
+  string username = 2;
+  string display_name = 3;
+  string bio = 4;                             // пусто, если скрыто настройками приватности
+  string avatar_file_id = 5;                  // пусто, если скрыт или не задан
+  UserStatus status = 6;                      // не заполняется, если скрыт
+  google.protobuf.Timestamp last_seen_at = 7; // не заполняется, если скрыто
+  ContactStatus contact_status = 8;           // отношение запрашивающего к пользователю
+  bool is_blocked_by_me = 9;
+  bool is_self = 10;
+  UserRole role = 11;
+}
+
+message PrivacySettings {
+  bool searchable = 1;
+  Visibility last_seen = 2;
+  Visibility status = 3;
+  Visibility avatar = 4;
+  Visibility bio = 5;
+  Audience message_from = 6;
+  Audience group_invite_from = 7;
+  Audience call_from = 8;
+  bool read_receipts = 9;
+  bool typing_indicator = 10;
+}
+
+message ContactLink {
+  string link_id = 1;
+  UserProfile user = 2;                       // противоположная сторона
+  ContactStatus status = 3;
+  bool incoming = 4;                          // запрос адресован мне
+  google.protobuf.Timestamp created_at = 5;
+}
+
+service UserService {
+  // Профиль текущего пользователя с настройками.
+  rpc GetMe(google.protobuf.Empty) returns (GetMeResponse);
+  // Изменение отображаемого имени и описания. Ник не меняется.
+  rpc UpdateProfile(UpdateProfileRequest) returns (UserProfile);
+  // Установка аватара ранее загруженным файлом (kind = AVATAR).
+  rpc SetAvatar(SetAvatarRequest) returns (UserProfile);
+  // Профиль по идентификатору или нику.
+  rpc GetUser(GetUserRequest) returns (UserProfile);
+  // Поиск по нику и имени среди пользователей, не скрывших себя из поиска.
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+  // Текущие настройки приватности.
+  rpc GetPrivacy(google.protobuf.Empty) returns (PrivacySettings);
+  // Обновление настроек приватности.
+  rpc UpdatePrivacy(PrivacySettings) returns (PrivacySettings);
+  // Запрос на добавление в контакты.
+  rpc SendContactRequest(SendContactRequestRequest) returns (ContactLink);
+  // Ответ на входящий запрос.
+  rpc RespondContactRequest(RespondContactRequestRequest) returns (ContactLink);
+  // Удаление из контактов.
+  rpc RemoveContact(RemoveContactRequest) returns (google.protobuf.Empty);
+  // Список контактов и запросов.
+  rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
+  // Блокировка пользователя.
+  rpc BlockUser(BlockUserRequest) returns (google.protobuf.Empty);
+  // Снятие блокировки.
+  rpc UnblockUser(BlockUserRequest) returns (google.protobuf.Empty);
+  // Список заблокированных.
+  rpc ListBlockedUsers(PageRequest) returns (ListBlockedUsersResponse);
+  // Удаление учётной записи (с задержкой 14 суток, отменяется входом).
+  rpc DeleteAccount(DeleteAccountRequest) returns (DeleteAccountResponse);
+}
+
+message GetMeResponse {
+  UserProfile profile = 1;
+  PrivacySettings privacy = 2;
+  bool totp_enabled = 3;
+  google.protobuf.Timestamp recovery_set_at = 4;
+  int64 current_update_seq = 5;               // точка, с которой клиент подписывается на обновления
+}
+
+message UpdateProfileRequest {
+  string display_name = 1;
+  string bio = 2;
+}
+
+message SetAvatarRequest { string file_id = 1; }
+
+message GetUserRequest {
+  oneof ref {
+    string user_id = 1;
+    string username = 2;
+  }
+}
+
+message SearchUsersRequest {
+  string query = 1;                           // не короче 3 символов
+  PageRequest page = 2;
+}
+
+message SearchUsersResponse {
+  repeated UserProfile users = 1;
+  PageInfo page = 2;
+}
+
+message SendContactRequestRequest {
+  oneof ref {
+    string user_id = 1;
+    string username = 2;
+  }
+}
+
+message RespondContactRequestRequest {
+  string link_id = 1;
+  bool accept = 2;
+}
+
+message RemoveContactRequest { string user_id = 1; }
+
+message ListContactsRequest {
+  bool include_pending = 1;
+  PageRequest page = 2;
+}
+
+message ListContactsResponse {
+  repeated ContactLink contacts = 1;
+  PageInfo page = 2;
+}
+
+message BlockUserRequest { string user_id = 1; }
+
+message ListBlockedUsersResponse {
+  repeated UserProfile users = 1;
+  PageInfo page = 2;
+}
+
+message DeleteAccountRequest {
+  bytes auth_key = 1;
+  string totp_code = 2;
+}
+
+message DeleteAccountResponse {
+  google.protobuf.Timestamp scheduled_for = 1;
+}

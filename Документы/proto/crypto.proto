@@ -1,0 +1,60 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Криптографические типы секретных чатов.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+// Публичный набор ключей устройства (X3DH / PQXDH).
+message KeyBundle {
+  bytes identity_pub = 1;                     // 32 байта
+  uint32 spk_id = 2;
+  bytes spk_pub = 3;
+  bytes spk_sig = 4;                          // Ed25519 подпись spk_pub ключом идентичности
+  bytes kem_pub = 5;                          // ML-KEM-768, необязательно
+  bytes kem_sig = 6;
+}
+
+message OneTimePrekey {
+  uint32 key_id = 1;
+  bytes pub = 2;
+}
+
+// Набор для установки сессии: ключи устройства + один одноразовый предключ.
+message PrekeyBundle {
+  string user_id = 1;
+  string device_id = 2;
+  KeyBundle keys = 3;
+  OneTimePrekey one_time_prekey = 4;          // отсутствует, если предключи закончились
+}
+
+// Начальные данные X3DH, передаваемые инициатором.
+message X3dhInit {
+  bytes initiator_identity_pub = 1;
+  bytes ephemeral_pub = 2;
+  uint32 spk_id = 3;
+  uint32 one_time_key_id = 4;                 // 0 — не использовался
+  bytes kem_ciphertext = 5;                   // для PQXDH
+}
+
+// Конверт сообщения секретного чата. Сервер не может его прочитать.
+message SecretEnvelope {
+  string sender_device_id = 1;
+  string receiver_device_id = 2;
+  bytes ratchet_pub = 3;                      // текущий открытый ключ ratchet отправителя
+  uint32 message_number = 4;                  // номер в текущей цепочке
+  uint32 previous_chain_length = 5;
+  bytes ciphertext = 6;                       // XChaCha20-Poly1305: тело + тег
+  X3dhInit x3dh = 7;                          // только в первом сообщении сессии
+}
+
+message DeviceKeys {
+  string device_id = 1;
+  string device_name = 2;
+  DevicePlatform platform = 3;
+  bytes identity_pub = 4;
+  google.protobuf.Timestamp last_seen_at = 5;
+}

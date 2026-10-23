@@ -1,0 +1,25 @@
+digraph G { rankdir=LR; splines=true; nodesep=0.5; ranksep=1.0; pad=0.3; bgcolor=white;
+ node [fontname="Times New Roman", fontsize=14];
+ edge [fontname="Times New Roman", fontsize=11];
+ // ГОСТ 19.701-90: схема взаимодействия программ. Процесс — прямоугольник, запоминаемые данные — цилиндр (прямой доступ), дисплей/ввод — по символам стандарта.
+ cli [shape=box, label="Клиент NEXO\n(программа)"];
+ api [shape=box, label="Сервер NEXO\n(программа)"];
+ wrk [shape=box, label="Рабочий узел\n(программа)"];
+ sfu [shape=box, label="Медиасервер LiveKit\n(программа)"];
+ pg [shape=cylinder, label="БД PostgreSQL\n(запоминаемые данные,\nпрямой доступ)"];
+ rd [shape=cylinder, label="Redis\n(данные в ОЗУ)"];
+ s3 [shape=cylinder, label="Хранилище S3\n(горячее, холодное)"];
+ loc [shape=cylinder, label="Локальная БД клиента\nSQLCipher"];
+ cli -> api [label="gRPC: вызовы,\nпоток событий (канал связи)", style=bold];
+ cli -> s3 [label="части файлов\n(канал связи)", style=dashed];
+ cli -> sfu [label="WebRTC\n(канал связи)", style=dashed];
+ cli -> loc [dir=both, label="чтение, запись"];
+ api -> pg [dir=both, label="SQL"];
+ api -> rd [dir=both, label="присутствие,\nсигналы"];
+ api -> s3 [dir=both, label="управление объектами"];
+ api -> sfu [label="комнаты, токены"];
+ sfu -> api [label="события комнат"];
+ wrk -> pg [dir=both, label="очередь заданий"];
+ wrk -> s3 [dir=both, label="обработка,\nперенос"];
+ api -> wrk [label="задания (через очередь)", style=dotted];
+}

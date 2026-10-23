@@ -1,0 +1,22 @@
+digraph G { rankdir=TB; splines=true; nodesep=0.3; ranksep=0.8; pad=0.3; bgcolor=white; compound=true;
+ node [shape=box, style="filled,rounded", fillcolor=white, fontname="Times New Roman", fontsize=14];
+ edge [fontname="Times New Roman", fontsize=11];
+ cl [label="Клиенты Avalonia (.NET): Windows, macOS, Linux, Web (WASM), Android, iOS"];
+ px [label="Обратный прокси Caddy: TLS 1.3, HTTP/2, gRPC-Web"];
+ subgraph cluster_srv { label="Сервер NEXO (ASP.NET Core, модульный монолит)"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  g [label="gRPC-конечные точки: авторизация, лимиты, проверка версии клиента"];
+  {rank=same; m1 [label="Identity"]; m2 [label="Directory"]; m3 [label="Chats"]; m4 [label="Messaging"]; m5 [label="Sync"];}
+  {rank=same; m6 [label="Media"]; m7 [label="Presence"]; m8 [label="Keys"]; m9 [label="Calls"]; m10 [label="Moderation"];} }
+ subgraph cluster_w { label="Рабочий узел (Worker)"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  w1 [label="Обработка медиа"]; w2 [label="Холодное хранение"]; w3 [label="Очистка по таймерам"]; w4 [label="Отправка push"]; }
+ subgraph cluster_inf { label="Инфраструктура"; labeljust=l; fontname="Times New Roman"; fontsize=15; style=dashed;
+  pg [label="PostgreSQL 16", shape=cylinder]; rd [label="Redis", shape=cylinder]; s3h [label="MinIO (горячее)", shape=cylinder]; s3c [label="S3 (холодное)", shape=cylinder]; lk [label="LiveKit SFU + TURN"]; }
+ cl -> px -> g;
+ g -> m1; g -> m2; g -> m3; g -> m4; g -> m5;
+ m1 -> m6 [style=invis]; m2 -> m7 [style=invis]; m3 -> m8 [style=invis]; m4 -> m9 [style=invis]; m5 -> m10 [style=invis];
+ m4 -> pg; m5 -> rd; m7 -> rd; m6 -> s3h; m9 -> lk; m1 -> pg;
+ m10 -> pg [style=invis];
+ w1 -> s3h; w2 -> s3h; w2 -> s3c; w3 -> pg; w4 -> pg;
+ cl -> lk [style=dotted, constraint=false, xlabel="WebRTC"];
+ cl -> s3h [style=dotted, constraint=false, xlabel="части файлов"];
+}

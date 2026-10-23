@@ -1,0 +1,20 @@
+digraph G { rankdir=LR; splines=true; nodesep=0.35; ranksep=1.6; pad=0.3; bgcolor=white;
+ node [fontname="Times New Roman", fontsize=14]; edge [arrowhead=none, color="#444444"];
+ U [shape=box, style=filled, fillcolor="#D9D9D9", label="Пользователь"];
+ subgraph cluster_s { label="Система NEXO: учётная запись, безопасность, профиль"; labeljust=l; fontname="Times New Roman"; fontsize=16; style=rounded; color="#555555"; node [shape=ellipse, style=filled, fillcolor=white];
+  u1 [label="Зарегистрироваться\nи войти"];
+  u2 [label="Восстановить доступ\nпо ключу"];
+  u3 [label="Управлять устройствами\nи двухфакторной защитой"];
+  u4 [label="Управлять приватностью\nи блокировками"];
+  u5 [label="Устанавливать статус"];
+  u6 [label="Настраивать оформление\nи горячие клавиши"];
+  u7 [label="Подавать жалобы"];
+ }
+ U -> u1;
+ U -> u2;
+ U -> u3;
+ U -> u4;
+ U -> u5;
+ U -> u6;
+ U -> u7;
+}

@@ -1,0 +1,48 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Ключи и секретные чаты (E2EE).
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "crypto.proto";
+import "chats.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+service KeyService {
+  // Публикует ключи устройства и первую партию одноразовых предключей.
+  rpc UploadKeyBundle(UploadKeyBundleRequest) returns (google.protobuf.Empty);
+  // Пополняет запас одноразовых предключей.
+  rpc RefillPrekeys(RefillPrekeysRequest) returns (google.protobuf.Empty);
+  // Остаток одноразовых предключей текущего устройства.
+  rpc GetPrekeyCount(google.protobuf.Empty) returns (GetPrekeyCountResponse);
+  // Набор для установки сессии с устройством собеседника; расходует один одноразовый предключ.
+  rpc GetPrekeyBundle(GetPrekeyBundleRequest) returns (PrekeyBundle);
+  // Устройства пользователя с ключами идентичности (для выбора устройства и проверки).
+  rpc ListUserDeviceKeys(ListUserDeviceKeysRequest) returns (ListUserDeviceKeysResponse);
+  // Создаёт секретный чат с конкретным устройством собеседника.
+  rpc CreateSecretChat(CreateSecretChatRequest) returns (Chat);
+  // Принимает секретный чат (на устройстве-адресате).
+  rpc AcceptSecretChat(SecretChatRef) returns (Chat);
+  // Закрывает секретный чат на стороне сервера (ключи на устройствах удаляются клиентами).
+  rpc CloseSecretChat(SecretChatRef) returns (google.protobuf.Empty);
+}
+
+message UploadKeyBundleRequest {
+  KeyBundle keys = 1;
+  repeated OneTimePrekey one_time_prekeys = 2;
+}
+message RefillPrekeysRequest { repeated OneTimePrekey one_time_prekeys = 1; }
+message GetPrekeyCountResponse { uint32 remaining = 1; }
+message GetPrekeyBundleRequest {
+  string user_id = 1;
+  string device_id = 2;
+}
+message ListUserDeviceKeysRequest { string user_id = 1; }
+message ListUserDeviceKeysResponse { repeated DeviceKeys devices = 1; }
+message CreateSecretChatRequest {
+  string peer_user_id = 1;
+  string peer_device_id = 2;
+  X3dhInit x3dh = 3;
+}
+message SecretChatRef { string chat_id = 1; }

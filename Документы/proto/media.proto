@@ -1,0 +1,138 @@
+// RU.00000000.00001-01 13 01. Протокол взаимодействия NEXO. Файлы и медиа.
+syntax = "proto3";
+
+package nexo.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+option csharp_namespace = "Nexo.Protocol.V1";
+
+message FileVariant {
+  VariantKind variant = 1;
+  int32 width = 2;
+  int32 height = 3;
+  int64 size_bytes = 4;
+}
+
+message FileInfo {
+  string file_id = 1;
+  string owner_id = 2;
+  MediaKind kind = 3;
+  string file_name = 4;
+  string mime = 5;
+  int64 size_bytes = 6;
+  int32 width = 7;
+  int32 height = 8;
+  int32 duration_ms = 9;
+  bool is_encrypted = 10;
+  FileState state = 11;
+  StorageTier tier = 12;                      // HOT — доступен сразу; COLD — требуется восстановление
+  repeated FileVariant variants = 13;
+  google.protobuf.Timestamp created_at = 14;
+  string sha256_hex = 15;
+}
+
+service MediaService {
+  // Создаёт файл и сессию многочастной загрузки. Лимиты размера и квоты проверяются здесь.
+  rpc InitUpload(InitUploadRequest) returns (InitUploadResponse);
+  // Выдаёт временные адреса для загрузки указанных частей непосредственно в хранилище.
+  rpc GetUploadPartUrls(GetUploadPartUrlsRequest) returns (GetUploadPartUrlsResponse);
+  // Завершает загрузку: сервер проверяет число частей, размер и SHA-256.
+  rpc CompleteUpload(CompleteUploadRequest) returns (FileInfo);
+  // Состояние загрузки для возобновления после обрыва.
+  rpc GetUploadStatus(UploadRef) returns (GetUploadStatusResponse);
+  // Отмена загрузки.
+  rpc AbortUpload(UploadRef) returns (google.protobuf.Empty);
+  // Метаданные файла.
+  rpc GetFile(GetFileRequest) returns (FileInfo);
+  // Временный адрес скачивания. Для файла в холодном хранилище возвращает FILE_RESTORING.
+  rpc GetDownloadUrl(GetDownloadUrlRequest) returns (GetDownloadUrlResponse);
+  // Запрос восстановления файла из холодного хранилища.
+  rpc RequestRestore(GetFileRequest) returns (RequestRestoreResponse);
+  // Удаление собственного файла.
+  rpc DeleteFile(GetFileRequest) returns (google.protobuf.Empty);
+  // Квота хранилища пользователя.
+  rpc GetQuota(google.protobuf.Empty) returns (GetQuotaResponse);
+}
+
+message InitUploadRequest {
+  MediaKind kind = 1;
+  string file_name = 2;
+  string mime = 3;
+  int64 size_bytes = 4;
+  bool is_encrypted = 5;                      // файл зашифрован клиентом (секретный чат)
+  string sha256_hex = 6;                      // контрольная сумма исходных данных
+  int32 width = 7;
+  int32 height = 8;
+  int32 duration_ms = 9;
+  bool send_as_file = 10;                     // без пережатия
+}
+
+message InitUploadResponse {
+  string file_id = 1;
+  string upload_id = 2;
+  int32 part_size = 3;                        // байт; последняя часть может быть короче
+  int32 parts_total = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message UploadRef { string upload_id = 1; }
+
+message GetUploadPartUrlsRequest {
+  string upload_id = 1;
+  repeated int32 part_numbers = 2;            // нумерация с 1
+}
+
+message PartUrl {
+  int32 part_number = 1;
+  string url = 2;
+  google.protobuf.Timestamp expires_at = 3;
+  map<string, string> headers = 4;
+}
+
+message GetUploadPartUrlsResponse { repeated PartUrl urls = 1; }
+
+message CompletedPart {
+  int32 part_number = 1;
+  string etag = 2;
+}
+
+message CompleteUploadRequest {
+  string upload_id = 1;
+  repeated CompletedPart parts = 2;
+  string sha256_hex = 3;
+}
+
+message GetUploadStatusResponse {
+  UploadState state = 1;
+  repeated int32 completed_parts = 2;
+  int32 part_size = 3;
+  int32 parts_total = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message GetFileRequest { string file_id = 1; }
+
+message GetDownloadUrlRequest {
+  string file_id = 1;
+  VariantKind variant = 2;                    // ORIGINAL — исходный файл
+}
+
+message GetDownloadUrlResponse {
+  string url = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  StorageTier tier = 3;
+}
+
+message RequestRestoreResponse {
+  StorageTier tier = 1;
+  google.protobuf.Timestamp estimated_ready_at = 2;
+}
+
+message GetQuotaResponse {
+  int64 used_bytes = 1;
+  int64 limit_bytes = 2;
+  int64 max_file_bytes = 3;
+}

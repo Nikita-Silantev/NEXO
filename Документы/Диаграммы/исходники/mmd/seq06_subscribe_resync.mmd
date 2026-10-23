@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    participant C as Клиент
+    participant API as Сервер NEXO
+    participant DB as PostgreSQL
+    C->>API: Subscribe(last_update_seq = N)
+    API->>DB: Окно журнала user_updates
+    alt N внутри окна хранения
+        API--)C: Накопленные обновления N+1 ... M
+        API--)C: Heartbeat каждые 15 с
+        API--)C: Новые обновления в реальном времени
+    else N старше окна (30 суток)
+        API--)C: SubscribeEvent(resync_required)
+        C->>API: GetState()
+        API-->>C: current_update_seq = K
+        C->>API: ListChats(page)
+        API-->>C: Чаты, snapshot_update_seq = K
+        loop Для открытых чатов
+            C->>API: GetHistory(chat_id, anchor_seq, limit)
+        end
+        C->>API: Subscribe(last_update_seq = K)
+    end

@@ -1,0 +1,13 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Ringing: StartCall
+    Ringing --> Active: JoinCall
+    Ringing --> Declined: DeclineCall всеми
+    Ringing --> Missed: Нет ответа 45 секунд
+    Ringing --> Failed: Ошибка медиасервера
+    Active --> Ended: EndCall или вышли все
+    Active --> Failed: Потеря медиасервера
+    Declined --> [*]
+    Missed --> [*]
+    Ended --> [*]
+    Failed --> [*]
