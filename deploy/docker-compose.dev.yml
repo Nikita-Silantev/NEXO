@@ -2,6 +2,7 @@
 # Запуск:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 services:
   postgres:
-    ports: ["127.0.0.1:5432:5432"]
+    # 15432, а не 5432: на компьютере разработчика часто уже занят стандартный порт PostgreSQL
+    ports: ["127.0.0.1:15432:5432"]
   server:
     ports: ["127.0.0.1:5080:5080", "127.0.0.1:5081:5081"]
