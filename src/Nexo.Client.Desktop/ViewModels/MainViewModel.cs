@@ -111,7 +111,7 @@ public sealed class MainViewModel : FormVm
         { await _s.Messenger.ArchiveAsync(c.ChatId, c.Chat.Me?.Archived != true); if (ReferenceEquals(Selected, c)) Selected = null; }));
         ToggleArchive = ReactiveCommand.Create(() => { ShowArchive = !ShowArchive; ReloadChats(); });
 
-        s.Sync.StateChanged += st => Ui(() => Connection = st switch { ConnectionState.Online => "", ConnectionState.Connecting => "Подключение…", _ => "Нет связи. Сообщения будут отправлены позже." });
+        s.Sync.StateChanged += st => Ui(() => Connection = st switch { ConnectionState.Online => "", ConnectionState.Connecting => "Подключение…", _ => "Нет связи. Сообщения будут отправлены позже." + (s.Sync.LastError is { } le ? " (" + le + ")" : "") });
         s.Sync.ChatsChanged += () => Ui(ReloadChats);
         s.Sync.MessagesChanged += id => Ui(() => { if (Selected?.ChatId == id) ReloadMessages(); });
         s.Sync.Typing += (chat, user) => Ui(() => OnTyping(chat, user));
