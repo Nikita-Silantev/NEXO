@@ -5,7 +5,7 @@
         <TextBlock Text="Ключ восстановления" Classes="title"/>
         <TextBlock Classes="hint" Text="Это единственный способ вернуть доступ, если вы забудете пароль. Мы не можем его восстановить. Запишите ключ на бумаге или сохраните в менеджере паролей. Он показывается один раз."/>
         <Border Padding="14" CornerRadius="8" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
-          <TextBlock Text="{Binding KeyText}" FontFamily="Menlo,Consolas,monospace" FontSize="17" TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+          <SelectableTextBlock Text="{Binding KeyText}" FontFamily="Menlo,Consolas,monospace" FontSize="17" TextWrapping="Wrap"/>
         </Border>
         <Button Content="Скопировать" Command="{Binding Copy}"/>
         <CheckBox IsChecked="{Binding Saved}" Content="Я сохранил(а) ключ в надёжном месте"/>

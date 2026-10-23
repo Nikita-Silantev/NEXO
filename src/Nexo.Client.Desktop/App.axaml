@@ -19,7 +19,7 @@
     <Style Selector="Border.bubble"><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="10,6"/><Setter Property="MaxWidth" Value="520"/>
       <Setter Property="HorizontalAlignment" Value="Left"/><Setter Property="Background" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}"/></Style>
     <Style Selector="Border.bubble.mine"><Setter Property="HorizontalAlignment" Value="Right"/><Setter Property="Background" Value="{DynamicResource SystemAccentColorDark1}"/></Style>
-    <Style Selector="Border.bubble.mine TextBlock"><Setter Property="Foreground" Value="White"/></Style>
+    <Style Selector="Border.bubble.mine :is(TextBlock)"><Setter Property="Foreground" Value="White"/></Style>
   </Application.Styles>
 
   <Application.DataTemplates>

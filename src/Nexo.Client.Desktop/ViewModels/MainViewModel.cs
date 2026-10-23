@@ -76,7 +76,6 @@ public sealed class MainViewModel : FormVm
     private ChatItemViewModel? _selected;
     private string _draft = "", _search = "", _connection = "Подключение…", _typing = "", _editingId = "", _replyToId = "", _replyPreview = "";
     private bool _showSettings, _showArchive;
-    private MessageViewModel? _contextMessage;
     private int _openGen;
 
     public ObservableCollection<ChatItemViewModel> Chats { get; } = [];

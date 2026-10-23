@@ -130,7 +130,7 @@ public sealed class DeviceServiceImpl(NpgsqlDataSource ds, SessionService sessio
     }
 
     private static AuthEventKind ParseKind(string s) =>
-        Enum.TryParse<AuthEventKind>(s.Replace("_", ""), true, out var k) ? k : AuthEventKind.Unspecified;
+        System.Enum.TryParse<AuthEventKind>(s.Replace("_", ""), true, out var k) ? k : AuthEventKind.Unspecified;
 
     private sealed class ApprovalRow
     {

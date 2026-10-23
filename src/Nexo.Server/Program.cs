@@ -53,7 +53,7 @@ builder.Services.AddSingleton<AuthInterceptor>();
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    o.KnownNetworks.Clear(); o.KnownProxies.Clear();   // сервер доступен только из сети Docker за Caddy
+    o.KnownIPNetworks.Clear(); o.KnownProxies.Clear();   // сервер доступен только из сети Docker за Caddy
 });
 
 var app = builder.Build();
