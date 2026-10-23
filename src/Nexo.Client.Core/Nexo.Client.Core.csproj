@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.*" />
+    <PackageReference Include="NSec.Cryptography" Version="25.*" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.*" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Nexo.Core\Nexo.Core.csproj" />
+    <ProjectReference Include="..\Nexo.Contracts\Nexo.Contracts.csproj" />
+  </ItemGroup>
+</Project>

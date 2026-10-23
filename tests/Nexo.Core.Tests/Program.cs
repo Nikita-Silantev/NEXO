@@ -118,5 +118,31 @@ Test("Подписи устройства: канонические сообще
     Eq(a.Length, 2 + 32 + 6);
 });
 
+Test("HKDF: вектор RFC 5869 (тест 1)", () =>
+{
+    var ikm = Convert.FromHexString("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b");
+    var salt = Convert.FromHexString("000102030405060708090a0b0c");
+    var info = Convert.FromHexString("f0f1f2f3f4f5f6f7f8f9");
+    var okm = System.Security.Cryptography.HKDF.DeriveKey(System.Security.Cryptography.HashAlgorithmName.SHA256, ikm, 42, salt, info);
+    Eq(Convert.ToHexString(okm).ToLowerInvariant(), "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865");
+});
+Test("Ключи клиента: метки разделяют AuthKey и проверочное значение", () =>
+{
+    var mk = new byte[32];
+    True(!ClientKeys.AuthKey(mk).AsSpan().SequenceEqual(ClientKeys.RecoveryVerifier(mk)));
+    Eq(ClientKeys.AuthKey(mk).Length, 32);
+});
+Test("Ключ восстановления: формат и разбор взаимно обратны", () =>
+{
+    for (int i = 0; i < 20; i++)
+    {
+        var k = RecoveryKey.Generate();
+        var text = RecoveryKey.Format(k);
+        True(RecoveryKey.Parse(text.ToLowerInvariant().Replace("-", " "))!.AsSpan().SequenceEqual(k), text);
+    }
+    True(RecoveryKey.Parse("ABC") is null);
+    True(RecoveryKey.Parse(new string('1', 52)) is null);
+});
+
 Console.WriteLine($"\nПройдено: {passed}, провалено: {failed}");
 return failed == 0 ? 0 : 1;
