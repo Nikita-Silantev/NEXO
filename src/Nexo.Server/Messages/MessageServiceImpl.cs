@@ -101,7 +101,7 @@ public sealed class MessageServiceImpl(NpgsqlDataSource ds, UpdateJournal journa
 
     /// <summary>Создаёт сообщение с очередным seq и добавляет обновление каждому участнику (включая другие устройства отправителя).</summary>
     private async Task<(MessageRow Row, List<(Guid, Update)> Pending)> InsertAsync(
-        DbConnection con, DbTransaction tx, AuthContext a, Guid chatId, Guid clientId, string text, IReadOnlyList<TextEntity> entities,
+        DbConnection con, DbTransaction tx, Nexo.Server.Infrastructure.AuthContext a, Guid chatId, Guid clientId, string text, IReadOnlyList<TextEntity> entities,
         Guid? replyTo, int ttlSeconds, ForwardOrigin? forward, CancellationToken ct)
     {
         var ctx = await RequireMemberAsync(con, chatId, a.UserId, tx, ct);

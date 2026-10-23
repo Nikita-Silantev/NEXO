@@ -17,7 +17,7 @@ public static class Kdf
         var pw = Encoding.UTF8.GetBytes(secret.Normalize(NormalizationForm.FormKC));
         try
         {
-            using var a = new Argon2id(pw)
+            using var a = new Konscious.Security.Cryptography.Argon2id(pw)
             {
                 Salt = salt, DegreeOfParallelism = (int)p.Parallelism, Iterations = (int)p.Iterations, MemorySize = (int)p.MemoryKib,
             };
