@@ -9,7 +9,7 @@ namespace Nexo.Server.Infrastructure;
 /// Единая обработка ошибок: NexoException → код gRPC + ErrorDetail в трейлере grpc-status-details-bin.
 /// Прочие исключения → Internal без подробностей (в журнал пишется только тип исключения и метод; НФТ-БЕЗ-05).
 /// </summary>
-public sealed class ErrorInterceptor(ILogger<ErrorInterceptor> log) : Interceptor
+public sealed class ErrorInterceptor(ILogger<ErrorInterceptor> log, IHostEnvironment env) : Interceptor
 {
     public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
         TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
@@ -40,6 +40,8 @@ public sealed class ErrorInterceptor(ILogger<ErrorInterceptor> log) : Intercepto
         if (e is OperationCanceledException) return new RpcException(new Status(StatusCode.Cancelled, "cancelled"));
         // Только тип и метод: сообщение исключения может содержать значения параметров.
         log.LogError("Необработанная ошибка в {Method}: {Type}", context.Method, e.GetType().Name);
+        // В режиме разработки добавляем текст ошибки (для PostgresException это сообщение и SQLSTATE, без значений параметров).
+        if (env.IsDevelopment()) log.LogError("Подробности (только Development): {Message}", e.Message);
         return new RpcException(new Status(StatusCode.Internal, "internal error"));
     }
 }

@@ -111,11 +111,11 @@ public sealed class UserServiceImpl(NpgsqlDataSource ds, UserQueries users, Upda
         await using var con = await ds.OpenAsync(ct);
         var ids = await con.ListAsync<Guid>(
             @"select u.id from users u join privacy_settings p on p.user_id = u.id
-              where u.state = 'ACTIVE' and u.id <> @v and p.searchable
-                and (u.username::text like @like || '%' escape '\' or lower(u.display_name) like '%' || @like || '%' escape '\')
-                and not exists(select 1 from user_blocks b where b.blocker_id = u.id and b.blocked_id = @v)
-              order by (u.username::text = @q) desc, u.username limit @l offset @o",
-            new { v = a.UserId, like, q, l = limit + 1, o = offset }, ct: ct);
+              where u.state = 'ACTIVE' and u.id <> @v::uuid and p.searchable
+                and (u.username::text like @prefix::text escape '\' or lower(u.display_name) like @contains::text escape '\')
+                and not exists(select 1 from user_blocks b where b.blocker_id = u.id and b.blocked_id = @v::uuid)
+              order by (u.username::text = @q::text) desc, u.username::text limit @l::int offset @o::int",
+            new { v = a.UserId, prefix = like + "%", contains = "%" + like + "%", q, l = limit + 1, o = offset }, ct: ct);
         var page = ids.Take(limit).ToList();
         var profiles = await users.ProfilesAsync(con, a.UserId, page, ct);
         var res = new SearchUsersResponse { Page = new PageInfo { HasMore = ids.Count > limit, NextCursor = ids.Count > limit ? (offset + limit).ToString() : "" } };

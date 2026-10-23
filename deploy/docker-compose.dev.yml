@@ -6,3 +6,5 @@ services:
     ports: ["127.0.0.1:15432:5432"]
   server:
     ports: ["127.0.0.1:5080:5080", "127.0.0.1:5081:5081"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development   # в журнал попадает текст необработанных ошибок
