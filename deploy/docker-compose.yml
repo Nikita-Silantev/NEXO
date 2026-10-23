@@ -61,8 +61,10 @@ services:
       retries: 10
     networks: [internal]
 
+  # Образы minio/minio и minio/mc удалены с Docker Hub (осень 2026), поэтому используется совместимый форк pgsty/silo
+  # (те же переменные MINIO_* и команда server). Версия закреплена; обновлять осознанно, проверяя резервные копии.
   minio:
-    image: minio/minio:latest
+    image: pgsty/silo:RELEASE.2026-10-18T00-00-00Z
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
@@ -74,22 +76,27 @@ services:
       - "127.0.0.1:9001:9001"       # консоль только с этого компьютера
     networks: [internal]
 
-  minio-init:
-    image: minio/mc:latest
-    depends_on:
-      - minio
+  # Создание хранилищ (бакетов). Образ pgsty/mc запускает mc напрямую, оболочки не требуется;
+  # пока MinIO не поднялся, команда завершается с ошибкой и Docker перезапускает её.
+  minio-init-media:
+    image: pgsty/mc:RELEASE.2026-10-18T00-00-00Z
+    depends_on: [minio]
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do echo "жду MinIO"; sleep 2; done &&
-        mc mb --ignore-existing local/nexo-media &&
-        mc mb --ignore-existing local/nexo-backups &&
-        echo "бакеты созданы"
+      MC_HOST_local: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000
+    entrypoint: ["mc"]
+    command: ["mb", "--ignore-existing", "local/nexo-media"]
+    restart: on-failure
     networks: [internal]
-    restart: "no"
+
+  minio-init-backups:
+    image: pgsty/mc:RELEASE.2026-10-18T00-00-00Z
+    depends_on: [minio]
+    environment:
+      MC_HOST_local: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000
+    entrypoint: ["mc"]
+    command: ["mb", "--ignore-existing", "local/nexo-backups"]
+    restart: on-failure
+    networks: [internal]
 
   backup:
     build:
@@ -99,7 +106,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio-init:
+      minio-init-media:
+        condition: service_completed_successfully
+      minio-init-backups:
         condition: service_completed_successfully
     user: postgres
     entrypoint: ["/scripts/backup-loop.sh"]
