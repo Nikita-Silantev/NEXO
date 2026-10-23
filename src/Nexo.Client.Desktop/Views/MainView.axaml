@@ -9,7 +9,8 @@
         <Button Grid.Column="1" Content="⚙" Command="{Binding ToggleSettings}" Margin="6,0,0,0" ToolTip.Tip="Настройки (Ctrl/⌘+,)"/>
         <Button Grid.Column="2" Content="🔒" Command="{Binding LockNow}" Margin="6,0,0,0" ToolTip.Tip="Заблокировать (Ctrl/⌘+L)"/>
       </Grid>
-      <TextBlock DockPanel.Dock="Top" Text="{Binding Connection}" IsVisible="{Binding HasConnectionNote}" Classes="hint" Margin="12,0,12,6"/>
+      <TextBlock DockPanel.Dock="Top" Text="{Binding Connection}" IsVisible="{Binding HasConnectionNote}" Classes="hint" Margin="12,0,12,6" TextWrapping="Wrap"/>
+      <TextBlock DockPanel.Dock="Top" Text="{Binding SearchNote}" IsVisible="{Binding HasSearchNote}" Classes="hint" Margin="12,0,12,6" TextWrapping="Wrap"/>
       <Button DockPanel.Dock="Bottom" Content="{Binding ArchiveButtonText}" Command="{Binding ToggleArchive}" Classes="link" HorizontalAlignment="Center"/>
       <StackPanel DockPanel.Dock="Top" IsVisible="{Binding HasFoundUsers}">
         <TextBlock Text="Пользователи" Classes="hint" Margin="12,4"/>

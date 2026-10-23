@@ -90,7 +90,6 @@ public sealed class MainViewModel : FormVm
         SettingsVm = new SettingsViewModel(shell, s);
         Send = ReactiveCommand.Create(DoSend);
         OpenUser = ReactiveCommand.CreateFromTask<UserProfile>(OpenUserAsync);
-        SearchCommand = ReactiveCommand.CreateFromTask(SearchAsync);
         ToggleSettings = ReactiveCommand.Create(() => { ShowSettings = !ShowSettings; if (ShowSettings) SettingsVm.Refresh.Execute().Subscribe(_ => { }, _ => { }); });
         LockNow = ReactiveCommand.Create(shell.Lock);
         CloseChat = ReactiveCommand.Create(() => { Selected = null; });
@@ -157,7 +156,6 @@ public sealed class MainViewModel : FormVm
 
     public ReactiveCommand<Unit, Unit> Send { get; }
     public ReactiveCommand<UserProfile, Unit> OpenUser { get; }
-    public ReactiveCommand<Unit, Unit> SearchCommand { get; }
     public ReactiveCommand<Unit, Unit> ToggleSettings { get; }
     public ReactiveCommand<Unit, Unit> LockNow { get; }
     public ReactiveCommand<Unit, Unit> CloseChat { get; }
@@ -179,12 +177,22 @@ public sealed class MainViewModel : FormVm
 
     // ---- список чатов ----
     private string _chatFilter = "";
+    private CancellationTokenSource? _searchCts;
+
+    /// <summary>Фильтр списка чатов и (от 3 символов) поиск пользователей на сервере с задержкой 300 мс после последнего символа.</summary>
     private void ApplySearchFilter()
     {
         _chatFilter = SearchText.Trim();
         ReloadChats();
+        _searchCts?.Cancel();
         FoundUsers.Clear();
-        if (_chatFilter.Length >= 3) SearchCommand.Execute().Subscribe(_ => { }, _ => { });
+        if (_chatFilter.TrimStart('@').Length < 3) return;
+        _searchCts = new CancellationTokenSource();
+        var ct = _searchCts.Token; var q = _chatFilter;
+        _ = Task.Run(async () =>
+        {
+            try { await Task.Delay(300, ct); await SearchAsync(q, ct); } catch (OperationCanceledException) { }
+        });
     }
 
     private void ReloadChats()
@@ -201,17 +209,25 @@ public sealed class MainViewModel : FormVm
         }
     }
 
-    private async Task SearchAsync()
+    private async Task SearchAsync(string q, CancellationToken ct)
     {
         try
         {
-            var q = _chatFilter;
-            var users = await _s.Messenger.SearchUsersAsync(q);
-            if (q != _chatFilter) return;
-            Ui(() => { FoundUsers.Clear(); foreach (var u in users.Where(u => !u.IsSelf)) FoundUsers.Add(u); });
+            var users = await _s.Messenger.SearchUsersAsync(q, ct);
+            if (ct.IsCancellationRequested) return;
+            Ui(() =>
+            {
+                FoundUsers.Clear();
+                foreach (var u in users.Where(u => !u.IsSelf)) FoundUsers.Add(u);
+                SearchNote = FoundUsers.Count == 0 ? "Никого не найдено" : "";
+            });
         }
-        catch (Grpc.Core.RpcException) { /* поиск вторичен: ошибки не показываем */ }
+        catch (Grpc.Core.RpcException e) when (!ct.IsCancellationRequested) { Ui(() => SearchNote = Nexo.Client.Core.ApiError.Message(e)); }
     }
+
+    private string _searchNote = "";
+    public string SearchNote { get => _searchNote; set { this.RaiseAndSetIfChanged(ref _searchNote, value); this.RaisePropertyChanged(nameof(HasSearchNote)); } }
+    public bool HasSearchNote => _searchNote != "";
 
     private async Task OpenUserAsync(UserProfile u)
     {
