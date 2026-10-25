@@ -133,6 +133,7 @@
                     <TextBlock Text="изм." FontSize="11" Opacity="0.7" IsVisible="{Binding Edited}"/>
                     <TextBlock Text="{Binding Time}" FontSize="11" Opacity="0.7"/>
                     <TextBlock Text="{Binding Status}" FontSize="11" Opacity="0.9"/>
+                    <Button Content="⋯" Click="OnMessageMenuClick" Padding="6,0" MinHeight="0" Background="Transparent" BorderThickness="0" Opacity="0.8" ToolTip.Tip="Действия с сообщением"/>
                   </StackPanel>
                 </StackPanel>
               </Border>

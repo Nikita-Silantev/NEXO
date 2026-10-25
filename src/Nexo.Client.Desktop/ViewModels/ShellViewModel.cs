@@ -69,7 +69,10 @@ public sealed class ShellViewModel : VmBase
 
     public async Task UnlockAsync(string secret, bool usePin)
     {
-        var ldk = await Vault.UnlockAsync(secret, usePin);
+        if (!Vault.Exists) { ShowLogin("Локальные данные удалены. Войдите заново."); return; }
+        byte[] ldk;
+        try { ldk = await Vault.UnlockAsync(secret, usePin); }
+        catch (VaultWipedException e) { ShowLogin(e.Message + " Войдите заново."); return; }
         LocalDb? db = null;
         try
         {

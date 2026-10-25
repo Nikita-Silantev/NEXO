@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Nexo.Client.Desktop.ViewModels;
 
 namespace Nexo.Client.Desktop.Views;
@@ -29,6 +30,15 @@ public partial class MainView : UserControl
     }
 
     private TopLevel? _top;
+
+    /// <summary>Кнопка «⋯» открывает то же меню, что и правая кнопка (на случай, если жест правой кнопки недоступен).</summary>
+    private void OnMessageMenuClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not Visual v) return;
+        var bubble = v.GetVisualAncestors().OfType<Border>().FirstOrDefault(b => b.ContextMenu is not null);
+        bubble?.ContextMenu!.Open(bubble);
+        e.Handled = true;
+    }
 
     private void ScrollToEnd()
     {
