@@ -25,7 +25,7 @@ public sealed class ChatItemViewModel(Chat chat, string myId) : VmBase
         {
             var m = Chat.LastMessage;
             if (m is null) return "Нет сообщений";
-            if (m.Deleted) return "Сообщение удалено";
+            if (m.Deleted) return "";   // удалённое сообщение просто пропадает, без надгробия
             var text = m.Content?.ContentCase == MessageContent.ContentOneofCase.Text ? m.Content.Text.Text.Replace('\n', ' ') : "Сообщение";
             return (m.SenderId == myId ? "Вы: " : "") + text;
         }
@@ -267,7 +267,7 @@ public sealed class MainViewModel : FormVm
             var m = byId.TryGetValue(id, out var x) ? x : _s.Db.GetMessageById(id);
             return m is null ? "Сообщение недоступно" : m.Deleted ? "Сообщение удалено" : Trim(m.Content?.Text?.Text ?? "");
         }
-        foreach (var m in stored) Messages.Add(new MessageViewModel(m, null, _s.Data.UserId, peerRead, ReplyOf(m.ReplyToId)) { Owner = this });
+        foreach (var m in stored.Where(x => !x.Deleted)) Messages.Add(new MessageViewModel(m, null, _s.Data.UserId, peerRead, ReplyOf(m.ReplyToId)) { Owner = this });
         foreach (var o in _s.Db.Outbox(chat.ChatId)) Messages.Add(new MessageViewModel(null, o, _s.Data.UserId, peerRead, ReplyOf(o.ReplyToId)) { Owner = this });
         MessagesReloaded?.Invoke();
     }
