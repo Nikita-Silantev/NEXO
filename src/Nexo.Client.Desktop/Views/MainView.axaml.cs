@@ -19,8 +19,16 @@ public partial class MainView : UserControl
             if (_vm is not null) _vm.MessagesReloaded += ScrollToEnd;
         };
         Composer.AddHandler(KeyDownEvent, OnComposerKey, Avalonia.Interactivity.RoutingStrategies.Tunnel);
-        AddHandler(KeyDownEvent, OnShortcut, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        // Горячие клавиши вешаем на окно: пока ни один элемент не в фокусе, события клавиш до MainView не доходят.
+        AttachedToVisualTree += (_, _) =>
+        {
+            _top = TopLevel.GetTopLevel(this);
+            _top?.AddHandler(KeyDownEvent, OnShortcut, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        };
+        DetachedFromVisualTree += (_, _) => { _top?.RemoveHandler(KeyDownEvent, OnShortcut); _top = null; };
     }
+
+    private TopLevel? _top;
 
     private void ScrollToEnd()
     {

@@ -126,7 +126,8 @@
                     <TextBlock Text="{Binding ReplyText}" Classes="hint" TextTrimming="CharacterEllipsis"/>
                   </Border>
                   <TextBlock Text="Пересланное сообщение" Classes="hint" IsVisible="{Binding IsForwarded}"/>
-                  <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+                  <!-- обычный TextBlock: SelectableTextBlock перехватывает правую кнопку и показывает свой пункт «Копировать» вместо нашего меню -->
+                  <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
                   <TextBlock Text="{Binding Error}" Classes="error" IsVisible="{Binding Failed}"/>
                   <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
                     <TextBlock Text="изм." FontSize="11" Opacity="0.7" IsVisible="{Binding Edited}"/>
